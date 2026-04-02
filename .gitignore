@@ -1,0 +1,149 @@
+# ROOK — .gitignore
+
+# ─── ENVIRONMENT & SECRETS ──────────────────────────────────
+.env
+.env.*
+!.env.example
+*.env
+
+# ─── PYTHON ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ─── VIRTUAL ENVIRONMENTS ────────────────────────────────────
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.env/
+
+# ─── DATABASE ────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+rook.db
+
+# ─── ML MODELS (large binary files) ─────────────────────────
+# ⚠️  These are large — use Git LFS or host separately
+models/*.pkl
+models/*.index
+models/*.npy
+models/*.bin
+# Uncomment below to track them with Git LFS instead:
+# !models/svd_model.pkl
+# !models/tfidf_vectorizer.pkl
+# !models/cosine_sim.pkl
+# !models/book_faiss.index
+# !models/book_meta.pkl
+
+# ─── DATASET (large CSV files) ───────────────────────────────
+# ⚠️  Add to LFS or document download instructions
+dataset/*.csv
+# Uncomment to include:
+# !dataset/books_genre.csv
+# !dataset/ratings_processed.csv
+
+# ─── UPLOADS (user-generated content) ────────────────────────
+uploads/
+backend/uploads/
+
+# ─── LOGS ────────────────────────────────────────────────────
+*.log
+*.log.*
+logs/
+log/
+
+# ─── NODE / FRONTEND ─────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+dist-ssr/
+*.local
+.cache/
+.parcel-cache/
+.next/
+out/
+.nuxt/
+.vuepress/dist
+
+# ─── VITE ────────────────────────────────────────────────────
+.vite/
+vite.config.js.timestamp-*
+
+# ─── COVERAGE & TESTING ──────────────────────────────────────
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+.nyc_output/
+coverage/
+
+# ─── IDEs & EDITORS ──────────────────────────────────────────
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── JUPYTER ─────────────────────────────────────────────────
+.ipynb_checkpoints
+*.ipynb
+
+# ─── MISC ────────────────────────────────────────────────────
+*.bak
+*.tmp
+*.temp
+*.orig
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+Pipfile.lock
+poetry.lock
