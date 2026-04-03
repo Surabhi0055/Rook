@@ -833,61 +833,169 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
     </div>
   )
 }
-
-  //  SEARCH BAR
-function SearchBar({onSearch,onOpenBook,userName}){
-  const[query,setQuery]=useState(''); const[acItems,setAcItems]=useState([]); const[acOpen,setAcOpen]=useState(false)
-  const wrapRef=useRef(null); const timer=useRef(null)
+function SearchBar({ onSearch, onOpenBook, userName }) {
+  const [query, setQuery] = useState('')
+  const [acItems, setAcItems] = useState([])
+  const [acOpen, setAcOpen] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const wrapRef = useRef(null)
+  const btnRef = useRef(null)
+  const glintRef = useRef(null)
+  const timer = useRef(null)
   const { greeting } = useMemo(() => getTimeGreeting(userName), [])
-  useEffect(()=>{const fn=e=>{if(wrapRef.current&&!wrapRef.current.contains(e.target))setAcOpen(false)};document.addEventListener('mousedown',fn);return()=>document.removeEventListener('mousedown',fn)},[])
-  function onInput(val){
-    setQuery(val); clearTimeout(timer.current)
-    if(val.trim().length<2){setAcItems([]);setAcOpen(false);return}
-    timer.current=setTimeout(async()=>{
-      try{const r=await fetch(`${API_BASE}/search?query=${encodeURIComponent(val.trim())}&limit=7`);if(!r.ok)throw new Error();const d=await r.json();const items=fixCovers(Array.isArray(d)?d:(d?.results||d?.books||[]));setAcItems(items);setAcOpen(items.length>0)}catch{setAcItems([]);setAcOpen(false)}
-    },280)
+
+  const rotatingBooks = useMemo(() => [
+    'The Alchemist', 'Lord of the Rings', 'Pride and Prejudice',
+    'Harry Potter', 'And Then There Were None',
+  ], [])
+
+  // Close autocomplete on outside click
+  useEffect(() => {
+    const fn = e => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setAcOpen(false)
+    }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [])
+
+  // Rotate placeholder when input is empty
+  useEffect(() => {
+    if (query.trim()) return
+    const id = setInterval(() => {
+      setPlaceholderIndex(prev => (prev + 1) % rotatingBooks.length)
+    }, 2200)
+    return () => clearInterval(id)
+  }, [query, rotatingBooks.length])
+
+  function onInput(val) {
+    setQuery(val)
+    clearTimeout(timer.current)
+    if (val.trim().length < 2) { setAcItems([]); setAcOpen(false); return }
+    timer.current = setTimeout(async () => {
+      try {
+        const r = await fetch(`${API_BASE}/search?query=${encodeURIComponent(val.trim())}&limit=7`)
+        if (!r.ok) throw new Error()
+        const d = await r.json()
+        const items = fixCovers(Array.isArray(d) ? d : (d?.results || d?.books || []))
+        setAcItems(items); setAcOpen(items.length > 0)
+      } catch { setAcItems([]); setAcOpen(false) }
+    }, 280)
   }
-  function submit(){setAcOpen(false);if(query.trim())onSearch(query.trim())}
-  return(
+
+  function submit() { setAcOpen(false); if (query.trim()) onSearch(query.trim()) }
+
+  // Glint follows cursor inside button
+  function handleBtnMouseMove(e) {
+    if (!btnRef.current || !glintRef.current) return
+    const r = btnRef.current.getBoundingClientRect()
+    const x = ((e.clientX - r.left) / r.width) * 100
+    const y = ((e.clientY - r.top) / r.height) * 100
+    glintRef.current.style.left = x + '%'
+    glintRef.current.style.top = y + '%'
+  }
+
+  function handleBtnMouseLeave() {
+    if (glintRef.current) { glintRef.current.style.left = '30%'; glintRef.current.style.top = '30%' }
+  }
+
+  const dynamicPlaceholder = `Search "${rotatingBooks[placeholderIndex]}"`
+
+  return (
     <div className="home-body">
       <div className="home-welcome-strip">
         <span className="hw-label">
-          {greeting}, <span className="hw-name">{userName||'Reader'}</span>
+          {greeting}, <span className="hw-name">{userName || 'Reader'}</span>
         </span>
       </div>
+
       <div className="home-search-center">
         <h2 className="home-tagline">Discover Your Next Great Read</h2>
         <p className="home-tagline-sub">Search by title, author, genre or describe what you feel like reading</p>
-        <div ref={wrapRef} style={{position:'relative',width:'100%',maxWidth:680,margin:'0 auto'}}>
-          <div className="home-sw">
-            <input className="home-search" type="text" placeholder="Search title, author or describe a mood…" value={query}
-              onChange={e=>onInput(e.target.value)}
-              onKeyDown={e=>{if(e.key==='Enter'){setAcOpen(false);submit()}if(e.key==='Escape')setAcOpen(false)}}
-              onFocus={()=>{if(acItems.length)setAcOpen(true)}} autoComplete="off"/>
-            <button className="home-sbtn" onClick={submit}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+
+        <div ref={wrapRef} style={{ position: 'relative', width: '100%', maxWidth: 1000, margin: '0 auto' }}>
+          <div
+            className="home-sw"
+            style={{
+              transition: 'all 0.28s ease',
+              boxShadow: isFocused
+                ? '0 14px 34px rgba(0,0,0,0.28), 0 0 0 1px rgba(212,161,94,0.22)'
+                : '0 8px 20px rgba(0,0,0,0.16)',
+              borderRadius: 999,
+            }}
+          >
+            <input
+              className="home-search"
+              type="text"
+              placeholder={dynamicPlaceholder}
+              value={query}
+              onChange={e => onInput(e.target.value)}
+              onFocus={() => { setIsFocused(true); if (acItems.length) setAcOpen(true) }}
+              onBlur={() => setIsFocused(false)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { setAcOpen(false); submit() }
+                if (e.key === 'Escape') setAcOpen(false)
+              }}
+              autoComplete="off"
+            />
+
+            {/* Animated search button with cursor-tracking glint */}
+            <button
+              ref={btnRef}
+              className="home-sbtn"
+              onClick={submit}
+              onMouseMove={handleBtnMouseMove}
+              onMouseLeave={handleBtnMouseLeave}
+            >
+              <span ref={glintRef} className="sbtn-glint" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="7" />
+                <line x1="16.5" y1="16.5" x2="22" y2="22" />
+              </svg>
             </button>
           </div>
-          {acOpen&&acItems.length>0&&(
-            <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,zIndex:9999,background:'var(--bg2)',border:'1px solid rgba(114,57,63,0.15)',borderRadius:12,boxShadow:'0 8px 32px rgba(0,0,0,0.2)',overflow:'hidden'}}>
-              {acItems.map((book,i)=>{const imgUrl=cleanImageUrl(book.image_url);return(
-                <div key={i} onMouseDown={e=>{e.preventDefault();setAcOpen(false);setQuery(book.title);onOpenBook(book)}}
-                  style={{display:'flex',alignItems:'center',gap:14,padding:'10px 16px',cursor:'pointer',borderBottom:i<acItems.length-1?'1px solid rgba(114,57,63,0.08)':'none'}}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(114,57,63,0.07)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <div style={{width:36,height:50,borderRadius:4,overflow:'hidden',flexShrink:0,background:'rgba(114,57,63,0.15)'}}>
-                    {imgUrl&&<img src={imgUrl} alt="" loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>e.target.style.display='none'}/>}
+
+          {/* Autocomplete dropdown */}
+          {acOpen && acItems.length > 0 && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+              zIndex: 9999, background: 'var(--bg2)',
+              border: '1px solid rgba(114,57,63,0.15)', borderRadius: 12,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.2)', overflow: 'hidden',
+            }}>
+              {acItems.map((book, i) => {
+                const imgUrl = cleanImageUrl(book.image_url)
+                return (
+                  <div key={i}
+                    onMouseDown={e => { e.preventDefault(); setAcOpen(false); setQuery(book.title); onOpenBook(book) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px',
+                      cursor: 'pointer',
+                      borderBottom: i < acItems.length - 1 ? '1px solid rgba(114,57,63,0.08)' : 'none',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(114,57,63,0.07)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ width: 36, height: 50, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'rgba(114,57,63,0.15)' }}>
+                      {imgUrl && <img src={imgUrl} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: 'Montaga,serif', fontSize: 13, color: 'var(--text)', fontWeight: 500, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{book.title}</div>
+                      <div style={{ fontFamily: 'Montserrat Alternates,sans-serif', fontSize: 10.5, color: 'var(--text-muted)', marginTop: 2 }}>{book.authors || ''}</div>
+                    </div>
                   </div>
-                  <div style={{minWidth:0}}>
-                    <div style={{fontFamily:'Montaga,serif',fontSize:13,color:'var(--text)',fontWeight:500,overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}}>{book.title}</div>
-                    <div style={{fontFamily:'Montserrat Alternates,sans-serif',fontSize:10.5,color:'var(--text-muted)',marginTop:2}}>{book.authors||''}</div>
-                  </div>
-                </div>
-              )})}
+                )
+              })}
             </div>
           )}
         </div>
-        <div className="home-pills">{GENRE_PILLS.map(g=><button key={g} className="pill" onClick={()=>onSearch(g.toLowerCase())}>{g}</button>)}</div>
+
+        <div className="home-pills">
+          {GENRE_PILLS.map(g => (
+            <button key={g} className="pill" onClick={() => onSearch(g.toLowerCase())}>{g}</button>
+          ))}
+        </div>
       </div>
     </div>
   )

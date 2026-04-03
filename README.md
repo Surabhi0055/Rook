@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="screenshots/12_landing_page.png" alt="ROOK Landing Page" width="100%"/>
-
-# ROOK
+#  ROOK
 
 ### AI-Powered Book Recommendation System
 
@@ -140,7 +138,6 @@ ROOK is not just a search engine — it's a mood-aware, AI-powered literary comp
 
 ## Project Structure
 
-```
 BOOK_RECOMMENDER/                    ← Project Root
 ├── backend/
 │   ├── auth/
@@ -229,11 +226,10 @@ BOOK_RECOMMENDER/                    ← Project Root
 ├── .gitignore
 ├── requirements.txt
 └── README.md
-```
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Frontend
 
@@ -243,7 +239,7 @@ BOOK_RECOMMENDER/                    ← Project Root
 | **React Router DOM v6**      | Client-side page routing                             |
 | **Custom CSS (global.css)**  | 12,000+ line design system — dark/light, animations |
 | **Google Fonts**             | Montaga + Montserrat Alternates typography           |
-| **Google Books API**         | Cover images + descriptions (free, no key needed)    |
+| **Google Books API**         | Cover images + descriptions                         |
 | **Spotify Web API**          | Real song URLs + album art for book soundtracks      |
 | **Wikipedia REST API**       | Author profile photos                                |
 | **Google Identity Services** | Google OAuth sign-in button (GSI)                    |
@@ -252,7 +248,7 @@ BOOK_RECOMMENDER/                    ← Project Root
 
 | Technology                     | Purpose                                              |
 | ------------------------------ | ---------------------------------------------------- |
-| **FastAPI**              | Async REST API — auto-docs at `/docs`             |
+| **FastAPI**              | Async REST API                                      |
 | **SQLAlchemy 2.x async** | ORM — works with SQLite (dev) and PostgreSQL (prod) |
 | **Pydantic v2**          | Schema validation for all requests/responses         |
 | **python-jose**          | JWT access + refresh token generation                |
@@ -325,7 +321,7 @@ Genre index provides candidate pool
 
 ---
 
-## 🎵 Song Soundtrack Feature
+## Song Soundtrack Feature
 
 Each book gets 5 perfectly matched songs via a priority cascade:
 
