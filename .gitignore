@@ -130,10 +130,6 @@ ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# ─── JUPYTER ─────────────────────────────────────────────────
-.ipynb_checkpoints
-*.ipynb
-
 # ─── MISC ────────────────────────────────────────────────────
 *.bak
 *.tmp
