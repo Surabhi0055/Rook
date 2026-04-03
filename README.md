@@ -2,7 +2,8 @@
 
 <img src="screenshots/12_landing_page.png" alt="ROOK Landing Page" width="100%"/>
 
-# 📚 ROOK
+# ROOK
+
 ### AI-Powered Book Recommendation System
 
 **Discover your next great read — by mood, season, vibe, or feeling.**
@@ -21,131 +22,123 @@
 
 ---
 
-## ✨ Features
+## Features
 
 ROOK is not just a search engine — it's a mood-aware, AI-powered literary companion.
 
-| Feature | Description |
-|---|---|
-| 🎭 **Mood Recommendations** | 12 emotional presets (cosy, tense, dreamy, romantic…) powered by Ollama LLM + FAISS semantic search |
-| 🌍 **Contextual Discovery** | Recommendations adapt to your season, time of day, travel context, and reading time |
-| 🎵 **Song Soundtracks** | Every book gets a curated Spotify playlist matching its emotional atmosphere |
-| 🤖 **AI Taste Profile** | "For You" uses Ollama LLM to analyse your full library and generate personalised picks |
-| 📖 **Describe Any Vibe** | Type *"a cosy mystery set in a rainy English village"* and get perfect matches |
-| ⭐ **Smart Ratings Chart** | Your 4–5 star ratings + likes/reads build a personal ranked chart |
-| 🔐 **Full Authentication** | Email/password, Google OAuth, OTP-based forgot-password via Gmail |
-| 🌙 **Dark / Light Theme** | Beautiful dual-theme design system with animated toggle |
-| 📱 **Responsive Design** | Works seamlessly on desktop and mobile |
+| Feature                        | Description                                                                                          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| **Mood Recommendations** | 12 emotional presets (cosy, tense, dreamy, romantic…) powered by Ollama LLM + FAISS semantic search |
+| **Contextual Discovery** | Recommendations adapt to your season, time of day, travel context, and reading time                  |
+| **Song Soundtracks**     | Every book gets a curated Spotify playlist matching its emotional atmosphere                         |
+| **AI Taste Profile**     | "For You" uses Ollama LLM to analyse your full library and generate personalised picks               |
+| **Describe Any Vibe**    | Type*"a cosy mystery set in a rainy English village"* and get perfect matches                        |
+| **Smart Ratings Chart**  | Your 4–5 star ratings + likes/reads build a personal ranked chart                                   |
+| **Full Authentication**  | Email/password, Google OAuth, OTP-based forgot-password via Gmail                                    |
+| **Dark / Light Theme**   | Beautiful dual-theme design system with animated toggle                                              |
+| **Responsive Design**    | Works seamlessly on desktop and mobile                                                               |
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
-### 🏠 Landing Page
+### Landing Page
+
 > Public-facing entry point with book cover collage and call-to-action buttons.
 
 <img src="screenshots/12_landing_page.png" alt="ROOK Landing Page" width="100%"/>
 
 ---
 
-### 🔐 Authentication
+### Authentication
+
 > Clean login panel with Google OAuth, email/password, remember me, and forgot password — rendered over a beautiful book-cover grid background.
 
 <img src="screenshots/11_auth_login.png" alt="ROOK Auth Login" width="100%"/>
 
 ---
 
-### 🎬 Hero Carousel — Home Page
+### Hero Carousel — Home Page
+
 > Full-height blurred-background hero carousel of daily featured books. Rotates every 7 seconds, seeded by genre and date. Thumbnail strip at the bottom for quick navigation.
 
 <img src="screenshots/01_hero_carousel.png" alt="ROOK Hero Carousel" width="100%"/>
 
 ---
 
-### 🔍 Home Feed & Search
+### Home Feed & Search
+
 > Time-aware greeting ("Good night, Surabhi"), semantic search bar with autocomplete, genre pill shortcuts, and the "Recently Viewed" row. All sections load lazily as you scroll.
 
 <img src="screenshots/02_home_search.png" alt="ROOK Home Search" width="100%"/>
 
 ---
 
-### 📚 Genre Page
+### Genre Page
+
 > Browse 22 genres from a collapsible sidebar. Each genre shows a full book grid with cover images, star ratings, and infinite scroll pagination.
 
 <img src="screenshots/03_genre_page.png" alt="ROOK Genre Page Romance" width="100%"/>
 
 ---
 
-### 👤 Author Page
+### Author Page
+
 > Search any author by name. Featured authors row with Wikipedia profile photos. Results show the full book collection with a genre quick-filter dropdown (showing Agatha Christie's 43 books).
 
 <img src="screenshots/04_author_page.png" alt="ROOK Author Page Agatha Christie" width="100%"/>
 
 ---
 
-### 💫 For You — Personalised Recommendations
+### For You — Personalised Recommendations
+
 > Based on your full library (24 books in this example). Includes "You Might Like" smart picks and "Top Rated for You" personal chart with ranked numbered cards and "You rated 5★" badges.
 
 <img src="screenshots/05_for_you.png" alt="ROOK For You Page" width="100%"/>
 
 ---
 
-### 🖊️ Describe a Book — Semantic Search
+### Describe a Book — Semantic Search
+
 > Type any description in plain English. The engine uses mood detection, genre mapping, and LLM expansion to find matching books. 10 example prompt chips provided as inspiration.
 
 <img src="screenshots/06_describe_page.png" alt="ROOK Describe Page" width="100%"/>
 
 ---
 
-### 🌞 Season & Travel Sections
+### Season & Travel Sections
+
 > Season-themed recommendations (Summer/Spring/Rainy/Autumn/Winter) with animated gradient backgrounds. Travel section with Long Flight, Train Journey, Beach Holiday, and Road Trip tabs.
 
 <img src="screenshots/07_season_travel.png" alt="ROOK Season and Travel" width="100%"/>
 
 ---
 
-### 📖 Book Modal — Song Soundtrack
+### Book Modal — Song Soundtrack
+
 > Click any book to open the detail modal. Shows description, star rating widget (5★ rated), Save/Like/Wishlist/Already Read buttons, and a **"Songs That Match This Book"** section with Spotify-linked tracks and mood tags.
 
 <img src="screenshots/08_book_modal_songs.png" alt="ROOK Book Modal Songs" width="100%"/>
 
 ---
 
-### 📖 Book Modal — Author Collection & More Like This
+### Book Modal — Author Collection & More Like This
+
 > Scrolling down the same modal reveals the **Gillian Flynn Collection** and a **"More Like This"** horizontal row — all powered by the 4-tier recommendation cascade.
 
 <img src="screenshots/09_modal_author_similar.png" alt="ROOK Book Modal Author Similar" width="100%"/>
 
 ---
 
-### 👤 Profile & Settings
+### Profile & Settings
+
 > User profile with avatar, display name, bio, favourite author detection, and email. Settings tab shows Account Information, editable Profile fields, and Your Library stats.
 
 <img src="screenshots/10_profile_settings.png" alt="ROOK Profile Settings" width="100%"/>
 
 ---
 
-## 📁 Project Structure
-
-### VS Code — Backend & Auth
-<div align="center">
-<img src="screenshots/16_vscode_backend.png" alt="Backend Structure" width="45%"/>
-</div>
-
-### VS Code — Models & Notebooks
-<div align="center">
-<img src="screenshots/13_vscode_models_notebooks.png" alt="Models and Notebooks" width="45%"/>
-</div>
-
-### VS Code — Frontend Pages & Components
-<div align="center">
-<img src="screenshots/14_vscode_frontend_structure.png" alt="Frontend Structure" width="45%"/>
-</div>
-
-### VS Code — Goodreads Dataset Files
-<div align="center">
-<img src="screenshots/15_vscode_dataset.png" alt="Dataset Files" width="45%"/>
-</div>
+## Project Structure
 
 ```
 BOOK_RECOMMENDER/                    ← Project Root
@@ -243,55 +236,59 @@ BOOK_RECOMMENDER/                    ← Project Root
 ## 🛠 Tech Stack
 
 ### Frontend
-| Technology | Purpose |
-|---|---|
-| **React 18 + Vite** | SPA framework + fast build tool |
-| **React Router DOM v6** | Client-side page routing |
-| **Custom CSS (global.css)** | 12,000+ line design system — dark/light, animations |
-| **Google Fonts** | Montaga + Montserrat Alternates typography |
-| **Google Books API** | Cover images + descriptions (free, no key needed) |
-| **Spotify Web API** | Real song URLs + album art for book soundtracks |
-| **Wikipedia REST API** | Author profile photos |
-| **Google Identity Services** | Google OAuth sign-in button (GSI) |
+
+| Technology                         | Purpose                                              |
+| ---------------------------------- | ---------------------------------------------------- |
+| **React 18 + Vite**          | SPA framework + fast build tool                      |
+| **React Router DOM v6**      | Client-side page routing                             |
+| **Custom CSS (global.css)**  | 12,000+ line design system — dark/light, animations |
+| **Google Fonts**             | Montaga + Montserrat Alternates typography           |
+| **Google Books API**         | Cover images + descriptions (free, no key needed)    |
+| **Spotify Web API**          | Real song URLs + album art for book soundtracks      |
+| **Wikipedia REST API**       | Author profile photos                                |
+| **Google Identity Services** | Google OAuth sign-in button (GSI)                    |
 
 ### Backend
-| Technology | Purpose |
-|---|---|
-| **FastAPI** | Async REST API — auto-docs at `/docs` |
+
+| Technology                     | Purpose                                              |
+| ------------------------------ | ---------------------------------------------------- |
+| **FastAPI**              | Async REST API — auto-docs at `/docs`             |
 | **SQLAlchemy 2.x async** | ORM — works with SQLite (dev) and PostgreSQL (prod) |
-| **Pydantic v2** | Schema validation for all requests/responses |
-| **python-jose** | JWT access + refresh token generation |
-| **passlib + bcrypt** | Secure password hashing |
-| **aiosmtplib** | Async OTP emails via Gmail |
-| **httpx** | Async Spotify API calls |
-| **aiofiles** | Async avatar image file uploads |
+| **Pydantic v2**          | Schema validation for all requests/responses         |
+| **python-jose**          | JWT access + refresh token generation                |
+| **passlib + bcrypt**     | Secure password hashing                              |
+| **aiosmtplib**           | Async OTP emails via Gmail                           |
+| **httpx**                | Async Spotify API calls                              |
+| **aiofiles**             | Async avatar image file uploads                      |
 
 ### Machine Learning & AI
-| Technology | Purpose |
-|---|---|
-| **FAISS** | Vector database — semantic nearest-neighbour search |
-| **Ollama (nomic-embed-text)** | Local text → 768-dim vector embeddings |
-| **Ollama LLM (llama3.2:3b)** | Mood query expansion + taste profiling |
-| **Surprise SVD** | Collaborative filtering on Goodreads ratings |
-| **Scikit-learn TF-IDF** | Content-based similarity (40,000 features) |
-| **TruncatedSVD** | Latent semantic analysis (120 components) |
-| **NumPy + Pandas** | Data processing and scoring |
+
+| Technology                          | Purpose                                              |
+| ----------------------------------- | ---------------------------------------------------- |
+| **FAISS**                     | Vector database — semantic nearest-neighbour search |
+| **Ollama (nomic-embed-text)** | Local text → 768-dim vector embeddings              |
+| **Ollama LLM (llama3.2:3b)**  | Mood query expansion + taste profiling               |
+| **Surprise SVD**              | Collaborative filtering on Goodreads ratings         |
+| **Scikit-learn TF-IDF**       | Content-based similarity (40,000 features)           |
+| **TruncatedSVD**              | Latent semantic analysis (120 components)            |
+| **NumPy + Pandas**            | Data processing and scoring                          |
 
 ### Dataset
+
 > Sourced from the **Goodreads Books Dataset** — cleaned, tagged with genres, and processed into training-ready CSVs.
 
-| File | Contents |
-|---|---|
-| `books_genre.csv` | Main catalogue — 10,000+ books with title, authors, genre, description, image_url, ratings |
-| `ratings_processed.csv` | Cleaned user-book rating pairs — used for SVD training |
-| `books.csv` | Raw Goodreads book metadata |
-| `book_tags.csv` | Tag-to-book mappings |
-| `ratings.csv` | Raw user ratings (millions of rows) |
-| `tags.csv` | Tag names and definitions |
+| File                      | Contents                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------- |
+| `books_genre.csv`       | Main catalogue — 10,000+ books with title, authors, genre, description, image_url, ratings |
+| `ratings_processed.csv` | Cleaned user-book rating pairs — used for SVD training                                     |
+| `books.csv`             | Raw Goodreads book metadata                                                                 |
+| `book_tags.csv`         | Tag-to-book mappings                                                                        |
+| `ratings.csv`           | Raw user ratings (millions of rows)                                                         |
+| `tags.csv`              | Tag names and definitions                                                                   |
 
 ---
 
-## 🧠 How the Recommendation Engine Works
+## How the Recommendation Engine Works
 
 ROOK uses a **5-signal fusion** approach in `recommender.py`:
 
@@ -320,11 +317,11 @@ Genre index provides candidate pool
 
 **Reading time recommendations:**
 
-| Bucket | Page Range | Primary Genres |
-|---|---|---|
-| 30 minutes | ≤ 220 pages | comedy, romance, mystery, YA |
-| 2 hours | 150 – 420 pages | thriller, fiction, crime |
-| Weekend | 350+ pages | epic-fantasy, classics, history, literary |
+| Bucket     | Page Range       | Primary Genres                            |
+| ---------- | ---------------- | ----------------------------------------- |
+| 30 minutes | ≤ 220 pages     | comedy, romance, mystery, YA              |
+| 2 hours    | 150 – 420 pages | thriller, fiction, crime                  |
+| Weekend    | 350+ pages       | epic-fantasy, classics, history, literary |
 
 ---
 
@@ -349,7 +346,7 @@ Each book gets 5 perfectly matched songs via a priority cascade:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -440,48 +437,48 @@ npm run dev
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
 ### Auth (`/api/auth`)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/register` | Create account |
-| `POST` | `/login` | Login → JWT tokens |
-| `POST` | `/google` | Google OAuth |
-| `POST` | `/refresh` | Refresh access token |
-| `GET` | `/me` | Current user profile |
-| `POST` | `/forgot-password/request` | Send OTP |
-| `POST` | `/forgot-password/verify` | Verify OTP |
-| `POST` | `/forgot-password/reset` | Reset password |
+| Method   | Endpoint                     | Description          |
+| -------- | ---------------------------- | -------------------- |
+| `POST` | `/register`                | Create account       |
+| `POST` | `/login`                   | Login → JWT tokens  |
+| `POST` | `/google`                  | Google OAuth         |
+| `POST` | `/refresh`                 | Refresh access token |
+| `GET`  | `/me`                      | Current user profile |
+| `POST` | `/forgot-password/request` | Send OTP             |
+| `POST` | `/forgot-password/verify`  | Verify OTP           |
+| `POST` | `/forgot-password/reset`   | Reset password       |
 
 ### Recommendations (`/api/recommend`)
 
-| Method | Endpoint | Key Parameters |
-|---|---|---|
-| `POST` | `/mood` | `mood`, `season`, `time_of_day`, `travel`, `reading_time`, `use_llm` |
-| `POST` | `/saved` | `liked_titles[]`, `saved_titles[]`, `read_titles[]`, `user_genres[]` |
-| `GET` | `/genre` | `genre`, `top_n` |
-| `GET` | `/author` | `author`, `top_n` |
-| `GET` | `/title` | `title`, `top_n` |
-| `POST` | `/description` | `description`, `liked_titles[]` |
-| `GET` | `/trending` | `top_n` |
-| `GET` | `/search` | `query`, `limit` |
+| Method   | Endpoint         | Key Parameters                                                                   |
+| -------- | ---------------- | -------------------------------------------------------------------------------- |
+| `POST` | `/mood`        | `mood`, `season`, `time_of_day`, `travel`, `reading_time`, `use_llm` |
+| `POST` | `/saved`       | `liked_titles[]`, `saved_titles[]`, `read_titles[]`, `user_genres[]`     |
+| `GET`  | `/genre`       | `genre`, `top_n`                                                             |
+| `GET`  | `/author`      | `author`, `top_n`                                                            |
+| `GET`  | `/title`       | `title`, `top_n`                                                             |
+| `POST` | `/description` | `description`, `liked_titles[]`                                              |
+| `GET`  | `/trending`    | `top_n`                                                                        |
+| `GET`  | `/search`      | `query`, `limit`                                                             |
 
 ### Books, Ratings & Songs
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/books/add-or-get` | Upsert book by CSV book_id or title |
-| `GET` | `/books/{book_id}` | Get single book |
-| `POST` | `/ratings/rate` | Submit/update star rating |
-| `GET` | `/ratings/{book_id}` | Community average + count |
-| `POST` | `/songs/recommend` | Get 5 songs for a book |
-| `POST` | `/users/{id}/upload-image` | Upload profile avatar |
+| Method   | Endpoint                     | Description                         |
+| -------- | ---------------------------- | ----------------------------------- |
+| `POST` | `/books/add-or-get`        | Upsert book by CSV book_id or title |
+| `GET`  | `/books/{book_id}`         | Get single book                     |
+| `POST` | `/ratings/rate`            | Submit/update star rating           |
+| `GET`  | `/ratings/{book_id}`       | Community average + count           |
+| `POST` | `/songs/recommend`         | Get 5 songs for a book              |
+| `POST` | `/users/{id}/upload-image` | Upload profile avatar               |
 
 ---
 
-## 🗄 Database
+## Database
 
 Supports **SQLite** (development) and **PostgreSQL** (production) — change `DATABASE_URL` in `.env`.
 
@@ -489,7 +486,7 @@ Supports **SQLite** (development) and **PostgreSQL** (production) — change `DA
 
 ---
 
-## 🔒 Security Notes
+## Security Notes
 
 - Passwords hashed with **bcrypt** — never stored in plain text
 - JWTs use **HS256** — set a strong `JWT_SECRET_KEY` (32-byte hex minimum)
@@ -500,7 +497,7 @@ Supports **SQLite** (development) and **PostgreSQL** (production) — change `DA
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create your branch: `git checkout -b feature/amazing-feature`
@@ -518,9 +515,7 @@ This project is licensed under the MIT License.
 
 <div align="center">
 
-**Built with ❤️ and a love of books**
-
-### 📚 ROOK — Your Literary Compass
+### ROOK — Your Literary Compass
 
 *React · FastAPI · Ollama · FAISS · Goodreads · Spotify*
 
