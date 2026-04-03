@@ -1,12 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { API_BASE, dedup, cleanImageUrl } from '../hooks/useBooks'
 
-// ─────────────────────────────────────────────────────────────
-// SEED CLUSTERS — For every genre's top books, we define
-// tightly-related "similar book" queries. These run first and
-// their results are ranked highest, pushing the most relevant
-// books to the top.
-// ─────────────────────────────────────────────────────────────
+// SEED CLUSTERS — For every genre's top books, we define tightly-related "similar book" queries. These run first and their results are ranked highest, pushing the most relevant books to the top.
 
 const SEED_CLUSTERS = {
   // ── FICTION ──────────────────────────────────────────────
@@ -294,9 +289,7 @@ const SEED_CLUSTERS = {
   ],
 }
 
-// ─────────────────────────────────────────────────────────────
 // GENRE DEFINITIONS
-// ─────────────────────────────────────────────────────────────
 const ALL_GENRES = [
   {
     key: 'fiction', label: 'Fiction',
@@ -537,9 +530,7 @@ function isClean(book, extraBlocklist = []) {
   return ![...GLOBAL_BLOCKLIST, ...extraBlocklist].some(w => haystack.includes(w.toLowerCase()))
 }
 
-// ─────────────────────────────────────────────────────────────
 // BOOK COVER
-// ─────────────────────────────────────────────────────────────
 function BookCover({ book }) {
   const url = cleanImageUrl(book?.image_url)
   const [failed, setFailed] = useState(false)
@@ -559,9 +550,7 @@ function BookCover({ book }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────
 // BOOK GRID
-// ─────────────────────────────────────────────────────────────
 const PAGE_SIZE = 48
 function BookGrid({ books, loading, onOpen }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -630,9 +619,7 @@ function BookGrid({ books, loading, onOpen }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────
 // GENRE SEARCH BAR
-// ─────────────────────────────────────────────────────────────
 function GenreSearch({ value, onChange }) {
   return (
     <div style={{ position: 'relative', width: '100%' }}>
@@ -651,9 +638,7 @@ function GenreSearch({ value, onChange }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────
 // CORE FETCH HELPER
-// ─────────────────────────────────────────────────────────────
 async function tryFetch(url, signal) {
   try {
     const r = await fetch(url, { signal })
@@ -664,11 +649,9 @@ async function tryFetch(url, signal) {
     return null
   }
 }
-
 function extractBooks(raw) {
   return Array.isArray(raw) ? raw : (raw?.books || [])
 }
-
 async function fetchGenreBooks(genre, signal, topN = 500) {
   const clusters = SEED_CLUSTERS[genre.key] || []
   const blocklist = genre.blocklist || []
@@ -703,7 +686,6 @@ async function fetchGenreBooks(genre, signal, topN = 500) {
   for (const r of tier1Results) {
     if (r.status === 'fulfilled' && r.value) tier1Books.push(...extractBooks(r.value))
   }
-
   // ── Tier 2: Broad label search ──
   const broad = await tryFetch(
     `${API_BASE}/search?query=${encodeURIComponent(genre.label)}&limit=50`,
@@ -722,10 +704,7 @@ async function fetchGenreBooks(genre, signal, topN = 500) {
 
   return { books: finalBooks.slice(0, topN), source: 'ranked' }
 }
-
-// ─────────────────────────────────────────────────────────────
 // SIDEBAR GROUPS
-// ─────────────────────────────────────────────────────────────
 const GENRE_GROUPS = [
   {
     label: 'Core Genres',
@@ -743,9 +722,7 @@ const GENRE_GROUPS = [
   },
 ]
 
-// ─────────────────────────────────────────────────────────────
 // MAIN PAGE
-// ─────────────────────────────────────────────────────────────
 export function GenrePage({ onOpen, initialGenre }) {
   const resolveInitial = useCallback(() => {
     if (!initialGenre) return ALL_GENRES[0]

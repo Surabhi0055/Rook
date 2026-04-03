@@ -87,8 +87,6 @@ def decode_token(token: str, expected_type: Optional[str] = None) -> dict:
         if expected_type and payload.get("type") != expected_type:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                # FIX 5: Original said "Invalid token type" with no context.
-                # This makes it clear exactly what was expected vs received.
                 detail=f"Expected '{expected_type}' token, got '{payload.get('type')}'",
             )
 

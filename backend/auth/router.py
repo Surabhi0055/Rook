@@ -5,7 +5,6 @@ from sqlalchemy import select, delete, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 import models
 import schemas
-
 from auth.google_auth import verify_google_token
 from auth.security import (
     create_access_token,       
@@ -118,12 +117,11 @@ async def login(body: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
     return schemas.TokenResponse(
         access_token=access,
         refresh_token=refresh,
-        user=schemas.UserResponse.model_validate(user),   # FIX 4
+        user=schemas.UserResponse.model_validate(user),   
     )
 
 class GoogleLoginRequest(BaseModel):
-    id_token: str   # matches frontend: apiPost('/auth/google', { id_token: ... })
-
+    id_token: str 
 
 @router.post("/google", response_model=schemas.TokenResponse)
 async def google_login(body: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
@@ -206,7 +204,7 @@ async def refresh_token(data: schemas.RefreshRequest):
 
 @router.get("/me", response_model=schemas.UserResponse)
 async def me(current_user=Depends(get_current_active_user)):
-    return schemas.UserResponse.model_validate(current_user)   # FIX 4
+    return schemas.UserResponse.model_validate(current_user)   
 
 # ─────────────────────────────────────────────
 # CHANGE PASSWORD
@@ -249,7 +247,7 @@ async def change_password(
     if body.current_password == body.new_password:
         raise HTTPException(status_code=400, detail="New password must differ from current password")
 
-    # 5. Update password — user is attached to db (this session), so commit works
+    # 5. Update password 
     user.hashed_password = hash_password(body.new_password)
     await db.flush()   
 

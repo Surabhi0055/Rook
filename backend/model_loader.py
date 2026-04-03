@@ -1,4 +1,3 @@
-#model_loader.py
 import joblib
 import pandas as pd
 

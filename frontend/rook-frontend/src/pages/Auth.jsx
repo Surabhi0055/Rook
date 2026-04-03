@@ -80,8 +80,6 @@ function GoogleSignInButton({ onCredential, onError, isLight }) {
 
     function tryInit() {
       attemptsRef.current++
-
-      // GSI script not loaded yet — keep polling (max 10 seconds)
       if (!window.google?.accounts?.id) {
         if (attemptsRef.current < 50) {
           timerRef.current = setTimeout(tryInit, 200)
@@ -90,7 +88,6 @@ function GoogleSignInButton({ onCredential, onError, isLight }) {
         }
         return
       }
-
       // Container not in DOM yet — wait for next paint
       if (!containerRef.current) {
         timerRef.current = setTimeout(tryInit, 100)
@@ -321,7 +318,7 @@ function LoginPanel({ onSwitch, onSuccess, isLight }) {
         <span onClick={() => onSwitch('register')} style={{ color:'#c9a84c', cursor:'pointer' }} onMouseEnter={e=>e.target.style.color='#e5c96d'} onMouseLeave={e=>e.target.style.color='#c9a84c'}>Sign up</span>
       </p>
 
-      {/* ── REAL Google button — no hidden iframe hack ── */}
+      {/* ── Google button — no hidden iframe hack ── */}
       <GoogleSignInButton
         onCredential={handleGoogleSuccess}
         onError={msg => setAlert({ msg, type:'error' })}

@@ -453,7 +453,7 @@ export function ForYouPage({
           <BookScroll books={youMightLike} loading={ymlLoad} {...scrollProps} />
         </SectionBlock>
 
-        {/* ── SHARED TOP RATED SECTION (same data as Home + TopRatedPage) ── */}
+        {/* ── SHARED TOP RATED SECTION ── */}
         <TopRatedSection
           likedBooks={likedBooks}
           savedBooks={savedBooks}

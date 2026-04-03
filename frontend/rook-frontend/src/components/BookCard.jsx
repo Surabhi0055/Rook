@@ -24,9 +24,7 @@ if (
 
 export { fetchGBCover, fetchGBDescription, cleanImageUrl, extractDesc };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // DESCRIPTION HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
 
 function isGoodDesc(desc) {
   if (!desc || desc.length < 60) return false;
@@ -37,10 +35,8 @@ function isGoodDesc(desc) {
   return true;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // SONG RECOMMENDATIONS
 // Uses backend via /api/songs/recommend
-// ─────────────────────────────────────────────────────────────────────────────
 
 const _NO_SONG_GENRES = new Set([
   "textbook", "academic", "mathematics", "physics", "chemistry", "engineering",
@@ -121,9 +117,7 @@ async function fetchSongRecommendations(book, apiBase) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // SONG CARD COMPONENT — no YouTube preview, links to Spotify or YouTube search
-// ─────────────────────────────────────────────────────────────────────────────
 
 function SongCard({ song, index, isLight }) {
   const [hov, setHov] = useState(false);
@@ -287,9 +281,7 @@ function SongCard({ song, index, isLight }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // SONG RECOMMENDATIONS SECTION
-// ─────────────────────────────────────────────────────────────────────────────
 
 function SongRecommendations({ book, isLight, apiBase }) {
   const [songs, setSongs] = useState([]);
@@ -413,9 +405,7 @@ function SongRecommendations({ book, isLight, apiBase }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // SIMILAR BOOKS
-// ─────────────────────────────────────────────────────────────────────────────
 
 const _BLOCKED_SIMILAR = [
   "harry potter", "lord of the rings", "twilight", "hunger games",
@@ -482,9 +472,7 @@ async function fetchSimilarBooks(book, API_BASE, signal) {
   return [];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // RATING PERSISTENCE
-// ─────────────────────────────────────────────────────────────────────────────
 
 const RATINGS_STORAGE_KEY = "rook_user_ratings";
 
@@ -525,9 +513,7 @@ function extractId(b) {
   return null;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // MINI CARD
-// ─────────────────────────────────────────────────────────────────────────────
 
 function MiniCard({ book, onOpen, isLight }) {
   const [hov, setHov] = useState(false);
@@ -563,9 +549,7 @@ function MiniCard({ book, onOpen, isLight }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // NAV ARROW
-// ─────────────────────────────────────────────────────────────────────────────
 
 function NavArrow({ dir, onClick, isLight, disabled }) {
   const [hov, setHov] = useState(false);
@@ -592,9 +576,7 @@ function NavArrow({ dir, onClick, isLight, disabled }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // BOOK MODAL
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function BookModal({
   book, onClose, savedSet, likedSet, wishedSet,
@@ -948,9 +930,7 @@ export function BookModal({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // RESOLVE AUTHORS
-// ─────────────────────────────────────────────────────────────────────────────
 
 function resolveAuthors(book) {
   const candidates = [
@@ -991,9 +971,7 @@ async function fetchAuthorFromGB(title) {
   return "";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // BOOK CARD
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function BookCard({ book }) {
   const { setModalBook, handleAuthor } = useApp();

@@ -1,4 +1,3 @@
-#external_books.py
 import requests
 import wikipedia
 from typing import Optional

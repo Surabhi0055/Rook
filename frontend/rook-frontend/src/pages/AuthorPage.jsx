@@ -44,7 +44,7 @@ function PageBanner({ eyebrow, title, sub }) {
   )
 }
 
-/* ── Author photo: Wikipedia API (no CORS block) ── */
+/* ── Author photo: Wikipedia API ── */
 function AuthorPhoto({ name }) {
   const [imgUrl, setImgUrl] = useState(null)
   const [failed, setFailed] = useState(false)

@@ -469,10 +469,8 @@ _KNOWN_SOUNDTRACKS: dict = {
     ],
 }
 
-
 def _normalize(s: str) -> str:
     return re.sub(r"[^a-z0-9 ]", "", s.lower()).strip()
-
 
 def _find_known(title: str) -> Optional[list]:
     t = _normalize(title)
@@ -488,7 +486,6 @@ def _find_known(title: str) -> Optional[list]:
 def _extract_genre_keywords(genre_str: str) -> list:
     """
     Split "LGBT, Fiction, Romance" → ["lgbt", "fiction", "romance"].
-    BUG FIX: always parse ALL genres, not just the first one.
     """
     if not genre_str:
         return []
@@ -719,7 +716,6 @@ _STATIC_FALLBACKS: dict = {
         {"title": "The Sound of Silence",     "artist": "Simon & Garfunkel", "mood": "quiet lonely introspection"},
     ],
 }
-
 
 def _static_fallback(genre_keywords: list) -> list:
     for kw in genre_keywords:

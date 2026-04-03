@@ -2,7 +2,6 @@ import os
 import random
 import string
 from datetime import datetime, timedelta, timezone
-
 import aiosmtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -13,15 +12,12 @@ load_dotenv()
 GMAIL_USER     = os.getenv("GMAIL_USER")
 GMAIL_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 
-
 _otp_store: dict = {}
 
 OTP_EXPIRE_MINUTES = 10
 
-
 def _generate_otp() -> str:
     return "".join(random.choices(string.digits, k=6))
-
 
 def store_otp(email: str) -> str:
     otp = _generate_otp()
@@ -30,7 +26,6 @@ def store_otp(email: str) -> str:
         "expires": datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRE_MINUTES),
     }
     return otp
-
 
 def verify_otp(email: str, otp: str) -> bool:
     email = email.lower()
@@ -44,7 +39,6 @@ def verify_otp(email: str, otp: str) -> bool:
         return False
     _otp_store.pop(email, None)   # OTP is single-use
     return True
-
 
 async def send_otp_email(to_email: str, otp: str, username: str) -> None:
     if not GMAIL_USER or not GMAIL_PASSWORD:

@@ -30,20 +30,20 @@ async def rate_book(
         if not (1 <= rating_data.rating <= 5):
             raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
 
-        # 1️⃣ Find book using CSV book_id
+        # Find book using CSV book_id
         result = await db.execute(
             select(Book).where(Book.book_id == rating_data.book_id)
         )
         book = result.scalar_one_or_none()
 
-        # 2️⃣ Fallback: treat as DB id
+        # Fallback: treat as DB id
         if not book:
             result = await db.execute(
                 select(Book).where(Book.id == rating_data.book_id)
             )
             book = result.scalar_one_or_none()
 
-        # 3️⃣ Create book if not exists
+        #  Create book if not exists
         if not book:
             book = Book(
                 book_id=rating_data.book_id,

@@ -43,9 +43,7 @@ _RATING_W = 0.15
 _RL_ALPHA            = 0.30   
 _FUSED_SOFT_POP_FLOOR = 20
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # DATA LOADING
-# ═══════════════════════════════════════════════════════════════════════════════
 
 model      = joblib.load("../models/svd_model.pkl")
 cosine_sim = joblib.load("../models/cosine_sim.pkl")
@@ -78,13 +76,11 @@ print(f"[startup] DESC_COL={_DESC_COL!r}")
 
 _BAD_VALUES = {"nan", "none", "n/a", "", "no description available.",
                "no description available for this book."}
-
 if _DESC_COL:
     books["description"] = books[_DESC_COL].fillna("").str.strip()
     books.loc[books["description"].str.lower().isin(_BAD_VALUES), "description"] = ""
 else:
     books["description"] = ""
-
 if "image_url" not in books.columns:
     books["image_url"] = ""
 books["image_url"] = books["image_url"].fillna("").str.strip()
@@ -134,11 +130,7 @@ else:
     books["_pages"] = 0
     print("[startup] No page-count column found — reading-time recs use genre fallback")
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # TAG PARSING
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def _split_tags(s) -> list[str]:
     if not s or not isinstance(s, str) or not s.strip():
         return []
@@ -180,11 +172,7 @@ _title_to_row_idx: dict     = {str(t).strip(): int(i) for i, t in enumerate(book
 _title_clean_to_row_idx: dict = {str(t).strip().lower(): int(i) for i, t in enumerate(books["title"])
                                   if isinstance(t, str) and t.strip()}
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # KNOWN-GENRE OVERRIDES
-# ═══════════════════════════════════════════════════════════════════════════════
-
 _TITLE_GENRE_OVERRIDES: dict[str, set[str]] = {
     "harry potter":           {"fantasy", "magic", "young-adult"},
     "lord of the rings":      {"fantasy", "epic-fantasy"},
@@ -229,11 +217,7 @@ def _get_effective_tags(row_idx: int) -> list[str]:
             break
     return base_tags
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # GENRE EXCLUSION
-# ═══════════════════════════════════════════════════════════════════════════════
-
 _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
     "romance": {
         "fantasy", "epic-fantasy", "high-fantasy", "dark-fantasy", "urban-fantasy",
@@ -324,20 +308,17 @@ _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
         "fantasy", "epic-fantasy", "science-fiction",
     },
     "30 minutes": {
-        # exclude anything known to be long / heavy
         "epic-fantasy", "high-fantasy", "fantasy", "science-fiction", "sci-fi",
         "history", "biography", "autobiography", "memoir", "non-fiction", "nonfiction",
         "philosophy", "politics", "economics", "essays", "self-help",
         "horror", "gothic", "occult",
     },
     "2 hours": {
-        # exclude obvious heavyweights
         "epic-fantasy", "high-fantasy", "non-fiction", "nonfiction",
         "biography", "autobiography", "memoir", "philosophy", "economics",
         "history", "politics", "essays",
     },
     "weekend": {
-        # exclude quick/shallow reads
         "children", "childrens", "kids", "middle-grade",
         "poetry", "short-stories", "anthology",
         "comedy", "humor", "humour",
@@ -347,8 +328,6 @@ _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
         "non-fiction", "nonfiction", "philosophy", "essays",
     },
     # ── Mood exclusions ───────────────────────────────────────────────────────
-    # Every mood blocks epic-fantasy + high-fantasy (HP/Tolkien source).
-    # Each mood also blocks genres that are tonally wrong for that feeling.
     "hopeful": {
         "epic-fantasy", "high-fantasy", "fantasy",
         "horror", "scary", "occult", "dark-fantasy", "gothic",
@@ -362,7 +341,7 @@ _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
         "manga", "graphic-novel",
     },
     "adventurous": {
-        "epic-fantasy", "high-fantasy",          # keeps urban-fantasy/dark-fantasy
+        "epic-fantasy", "high-fantasy",        
         "romance-novels", "chick-lit", "contemporary-romance",
         "non-fiction", "nonfiction", "biography", "philosophy", "essays",
         "manga", "graphic-novel",
@@ -402,7 +381,7 @@ _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
         "manga", "graphic-novel",
     },
     "dreamy": {
-        "epic-fantasy", "high-fantasy",          # keeps urban-fantasy, dark-fantasy
+        "epic-fantasy", "high-fantasy",       
         "non-fiction", "nonfiction", "biography", "history",
         "science-fiction", "sci-fi", "dystopia",
         "children", "childrens", "kids",
@@ -430,7 +409,6 @@ _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
         "manga", "graphic-novel", "children", "childrens", "kids",
     },
 }
-
 _GENRE_TITLE_EXCLUSIONS: dict[str, list[str]] = {
     "romance": [
         "harry potter", "lord of the rings", "fellowship of the ring",
@@ -456,19 +434,13 @@ def _is_excluded_from_genre(row_idx: int, genre_key: str) -> bool:
         tag_norm = tag.replace(" ", "-")
         if tag_norm in excl_tags or tag in excl_tags:
             return True
-        # FIX BUG 15: only match when the exclusion tag is a complete word-token,
         # preventing "fiction" inside "science-fiction" from falsely matching.
         for excl in excl_tags:
             if len(excl) >= 6 and excl == tag_norm:
                 return True
     return False
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # CONTENT MATRIX
-# FIX BUG 11: description weighted ×2, genre ×3, author ×2 — better TF-IDF signal
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def _make_soup(row: pd.Series) -> str:
     desc   = " ".join([str(row.get("description", "") or "")] * 2)
     genre  = " ".join([str(row.get("genre_clean",  "") or "")] * 3)
@@ -499,11 +471,7 @@ except AttributeError:
     _USE_BATCH_SVD = False
     print("[startup] SVD batch mode: OFF")
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SEMANTIC LAYER
-# ═══════════════════════════════════════════════════════════════════════════════
-
 _faiss_index: faiss.Index | None = None
 _book_meta:   pd.DataFrame | None = None
 _sem_ready:   bool = False
@@ -516,12 +484,11 @@ def _load_semantic_layer() -> None:
         _faiss_index = faiss.read_index(_FAISS_INDEX_PATH)
         _book_meta   = pd.read_pickle(_BOOK_META_PATH)
         _sem_ready   = True
-        print(f"[semantic] FAISS loaded ✓ vectors={_faiss_index.ntotal}")
+        print(f"[semantic] FAISS loaded vectors={_faiss_index.ntotal}")
     except Exception as e:
         print(f"[semantic] Failed: {e}")
 
 _load_semantic_layer()
-
 def _embed_query(text: str) -> np.ndarray:
     dim = _faiss_index.d if _faiss_index else 768
     try:
@@ -534,11 +501,9 @@ def _embed_query(text: str) -> np.ndarray:
         print(f"[embed_query] {e}")
         return np.zeros((1, dim), dtype=np.float32)
 
-
 def _semantic_search_raw(query_text: str, pool: int = 150, offset: int = 0) -> tuple[np.ndarray, np.ndarray]:
     """
-    FIX BUG 2: Filter out FAISS padding (-1 indices) before slicing by offset.
-    FAISS pads results with index=-1 when ntotal < requested k.
+    Filters out FAISS padding (-1 indices) before slicing by offset.
     """
     if not _sem_ready or _faiss_index is None:
         return np.array([]), np.array([])
@@ -561,11 +526,7 @@ def _semantic_search_raw(query_text: str, pool: int = 150, offset: int = 0) -> t
         pass
     return scores[:pool], indices[:pool]
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # GENRE ALIASES + INDEX
-# ═══════════════════════════════════════════════════════════════════════════════
-
 _GENRE_ALIASES: dict[str, list[str]] = {
     "romance": [
         "romance","romance-novels","romantic","love","love-story",
@@ -669,8 +630,7 @@ _GENRE_INDEX: dict[str, np.ndarray] = {}
 
 def _build_genre_index() -> None:
     """
-    FIX PERF P1: Removed O(N_aliases) inner fallback loop.
-    Now uses only the pre-built _TAG_TO_GENRE dict for O(1) lookup per tag.
+    Uses pre-built _TAG_TO_GENRE dict for O(1) lookup per tag.
     """
     global _GENRE_INDEX
     print("[genre_index] Building …")
@@ -692,11 +652,7 @@ def _build_genre_index() -> None:
 
 _build_genre_index()
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # MOOD MAPPINGS
-# ═══════════════════════════════════════════════════════════════════════════════
-
 _MOOD_TO_GENRES: dict[str, list[str]] = {
     "summer":              ["adventure","comedy","young-adult","romance"],
     "spring":              ["young-adult","literary","romance","comedy"],
@@ -772,15 +728,10 @@ def _match_mood_key(query: str) -> str | None:
             if re.search(signal, q): return key
     return None
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # GENRE MOOD SEARCH
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def _stable_rng_seed(text: str) -> int:
-    """FIX BUG 14: reproducible seed via MD5, not PYTHONHASHSEED-randomised hash()."""
+    """Reproducible seed via MD5."""
     return int(hashlib.md5(text.encode(), usedforsecurity=False).hexdigest(), 16) % (2**31)
-
 
 def _genre_mood_search(
     query: str,
@@ -796,7 +747,6 @@ def _genre_mood_search(
             if key in query.lower(): genre_keys = genres; break
 
     excl_key = genre_filter or mood_key
-
     candidate_sets, seen_set = [], set()
     for g in genre_keys:
         arr = _GENRE_INDEX.get(g)
@@ -805,7 +755,6 @@ def _genre_mood_search(
         if len(new_idx) > 0:
             candidate_sets.append(new_idx)
             seen_set.update(new_idx.tolist())
-
     if not candidate_sets:
         fallback = list(np.argsort(books["_trend_score"].values)[::-1][:pool * 2])
         if excl_key:
@@ -813,16 +762,13 @@ def _genre_mood_search(
         return fallback[:pool]
 
     all_candidates = np.concatenate(candidate_sets)
-
     if excl_key:
         all_candidates = np.array(
             [i for i in all_candidates if not _is_excluded_from_genre(int(i), excl_key)],
             dtype=np.int32
         )
-
     if len(all_candidates) == 0:
         return list(np.argsort(books["_trend_score"].values)[::-1][:pool])
-
     rng = np.random.default_rng(seed=_stable_rng_seed(query + str(offset)))
     score = (
         books.iloc[all_candidates]["average_rating"].values.astype(float)
@@ -830,17 +776,13 @@ def _genre_mood_search(
         + rng.random(len(all_candidates)) * 0.5
     )
     sorted_idx = all_candidates[np.argsort(score)[::-1]]
-
-    # FIX BUG 5: If offset >= len, fall back to start instead of wrapping to 0.
     if offset > 0:
         if len(sorted_idx) > offset + pool:
             sorted_idx = sorted_idx[offset:]
         elif len(sorted_idx) > offset:
             sorted_idx = sorted_idx[offset:]
         # else: not enough results — return from beginning, different shuffle covers diversity
-
     return list(sorted_idx[:pool])
-
 
 def _tfidf_mood_search(query: str, pool: int = 200) -> list[int]:
     if not query or not query.strip(): return []
@@ -853,10 +795,7 @@ def _tfidf_mood_search(query: str, pool: int = 200) -> list[int]:
     except Exception as e:
         print(f"[tfidf_mood_search] {e}"); return []
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # LLM EXPANSION — scene-aware query generation
-# ═══════════════════════════════════════════════════════════════════════════════
 
 _SCENE_PROMPTS: dict[str, str] = {
     "hopeful":      "The reader wants a book that leaves them feeling lifted and warm. They need stories about overcoming, healing, second chances, or quiet triumphs. The writing should feel like sunlight through a window.",
@@ -888,7 +827,6 @@ _SCENE_PROMPTS: dict[str, str] = {
     "night":        "The reader is in bed, the room is dark. They want something tender and soothing — a gentle romance, a quiet literary novel, something that eases them toward sleep rather than keeping them up.",
     "late_night":   "It's past midnight and the reader can't sleep. They want something dark, obsessive, unsettling — a book that matches the hour. The kind of story that feels different read in darkness.",
 }
-
 _SYSTEM_PROMPT = (
     "You are a book recommendation engine. Your job is to generate a rich, "
     "sensory description of the IDEAL BOOK for a reader in a specific scene. "
@@ -897,7 +835,6 @@ _SYSTEM_PROMPT = (
     "Do NOT use bullet points, labels, or introductory phrases. "
     "Output ONLY 2-3 sentences of vivid description. Be specific and evocative."
 )
-
 
 def _make_scene_prompt(mood: str, context: dict) -> str:
     """Build a scene-grounded prompt for the LLM."""
@@ -922,7 +859,6 @@ def _make_scene_prompt(mood: str, context: dict) -> str:
         )
     return f"The reader's mood is: {mood}.{user_genres}\n\nDescribe the ideal book for this reader:"
 
-
 def _llm_cache_key(mood: str, context: dict) -> str:
     ctx = context or {}
     relevant = tuple(sorted(
@@ -931,7 +867,6 @@ def _llm_cache_key(mood: str, context: dict) -> str:
         and isinstance(v, str) and v.strip()
     ))
     return f"{mood.lower().strip()}::{relevant}"
-
 
 def _expand_mood(mood: str, context: dict) -> str:
     """
@@ -971,15 +906,8 @@ def _expand_mood(mood: str, context: dict) -> str:
             continue
     return mood
 
-
-
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # GOOGLE BOOKS ENRICHMENT
 # Only called when enrich=True and fields are genuinely missing.
-# ═══════════════════════════════════════════════════════════════════════════════
-
 @lru_cache(maxsize=4096)
 def _google_enrich(title: str, author: str) -> tuple:
     if not GOOGLE_BOOKS_API_KEY:
@@ -1007,11 +935,7 @@ def _google_enrich(title: str, author: str) -> tuple:
         print(f"[google_enrich] Exception for '{title}': {e}")
         return ("", "")
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # DISPLAY HELPERS
-# ═══════════════════════════════════════════════════════════════════════════════
-
 _GENRE_MAP = {
     "fiction":"Fiction","fantasy":"Fantasy","mystery":"Mystery","romance":"Romance",
     "thriller":"Thriller","horror":"Horror","science-fiction":"Sci-Fi","sci-fi":"Sci-Fi",
@@ -1068,11 +992,7 @@ def _clean_genre(genre_str: str) -> str:
         if len(clean) >= 3: break
     return ", ".join(clean)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SERIALISATION
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def _to_dict(row: pd.Series, predicted_rating=None, enrich: bool = False) -> dict:
     title   = str(row.get("title",      "") or "").strip()
     authors = str(row.get("authors",    "") or "").strip()
@@ -1125,13 +1045,9 @@ def _to_dict(row: pd.Series, predicted_rating=None, enrich: bool = False) -> dic
         d["predicted_rating"] = round(float(predicted_rating), 2)
     return d
 
-
 def _rows_to_dicts_parallel(df: pd.DataFrame, top_n: int,
                              predicted_ratings: dict | None = None,
                              enrich: bool = False) -> list[dict]:
-    """
-    FIX PERF P3: Only use threads when list is large enough to justify overhead.
-    """
     rows = list(df.head(top_n).iterrows())
     if not rows: return []
     pr = predicted_ratings or {}
@@ -1143,7 +1059,6 @@ def _rows_to_dicts_parallel(df: pd.DataFrame, top_n: int,
     with ThreadPoolExecutor(max_workers=8) as ex:
         return list(ex.map(_convert, rows))
 
-
 def _rows_to_dicts_fast(row_indices: list[int],
                         predicted_ratings: dict | None = None,
                         enrich: bool = False) -> list[dict]:
@@ -1154,11 +1069,7 @@ def _rows_to_dicts_fast(row_indices: list[int],
         for i in row_indices if 0 <= i < len(books)
     ]
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # INDEX HELPERS
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def _title_to_idx(title: str) -> int | None:
     if not isinstance(title, str) or not title.strip(): return None
     idx = _title_to_row_idx.get(title.strip())
@@ -1179,9 +1090,7 @@ def _titles_to_indices(titles: list) -> list[int]:
     return out
 
 def _apply_rl_rerank(scores: np.ndarray, seed_indices: list) -> np.ndarray:
-    """
-    FIX BUG 13: Clamp combined score to [0,1] so RL boost never dominates relevance.
-    """
+
     if not seed_indices: return scores
     boost = cosine_similarity(_latent_mat, _latent_mat[seed_indices]).max(axis=1)
     combined = scores + _RL_ALPHA * boost
@@ -1190,12 +1099,7 @@ def _apply_rl_rerank(scores: np.ndarray, seed_indices: list) -> np.ndarray:
         combined = combined / max_val
     return combined
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # COLLABORATIVE SCORING
-# FIX BUG 3: _compute_collab_scores defined before cache wrapper for clarity.
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def _compute_collab_scores(user_id: int) -> dict[str, float]:
     if not _USE_BATCH_SVD: return {}
     try:
@@ -1224,11 +1128,7 @@ else:
     def _get_collab_scores_for_user(user_id: int) -> dict[str, float]:
         return _compute_collab_scores(user_id)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # FUSED RECOMMENDATION
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def recommend_fused(
     semantic_query:    str,
     mood_context:      dict       | None = None,
@@ -1244,7 +1144,6 @@ def recommend_fused(
     genre_filter:      str        | None = None,
     offset:            int               = 0,
 ) -> list[dict]:
-    # FIX BUG 4: normalise exclude set to lowercase for reliable matching
     exclude = {t.lower().strip() for t in (exclude_titles or set())
                if isinstance(t, str) and t.strip()}
     pool = min(300, len(books))
@@ -1326,14 +1225,12 @@ def recommend_fused(
     )
     if not candidate_indices: return trending_books(top_n)
 
-    # FIX BUG 7: Pre-screen genre_filter exclusions from candidates before fusion loop.
     if genre_filter:
         candidate_indices = {
             i for i in candidate_indices if not _is_excluded_from_genre(i, genre_filter)
         }
     if not candidate_indices: return trending_books(top_n)
 
-    # FIX BUG 6: force_genre_blend gives genre 60 % of semantic budget, sem 40 %.
     # Without blend, genre gets 30 %, sem gets 70 % of the sem_w budget.
     if force_genre_blend and genre_idx_scores:
         eff_sem_w   = sem_w * 0.40
@@ -1350,7 +1247,6 @@ def recommend_fused(
         if not (0 <= idx < len(books)): continue
         title = books.iloc[idx]["title"]
         if not isinstance(title, str) or not title.strip(): continue
-        # FIX BUG 4: compare lowercased title
         if title.lower().strip() in exclude: continue
         sem_n   = sem_idx_scores.get(idx, 0.0)
         genre_n = genre_idx_scores.get(idx, tfidf_idx_scores.get(idx, 0.0))
@@ -1372,11 +1268,7 @@ def recommend_fused(
         reranked = [i for i, _ in fused[:top_n]]
     return _rows_to_dicts_fast(reranked)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # MOOD QUERY MAP + SEMANTIC QUERY BUILDER
-# ═══════════════════════════════════════════════════════════════════════════════
-
 _MOOD_QUERY_MAP: dict[str, str] = {
     "summer":        "beach holiday adventure sun romance light-hearted escapism warm fast-paced",
     "spring":        "new beginnings hope renewal growth optimistic fresh character",
@@ -1501,10 +1393,7 @@ def _is_genre_dominant(mood: str) -> bool:
 
 def _build_semantic_query(mood: str, context: dict, use_llm: bool = True) -> str:
     """
-    FIX BUG 8: Genre-dominant moods bypass LLM expansion entirely.
-    LLM prose degrades FAISS precision for genre queries (e.g. 'romance' →
-    Ollama may output 'sweeping tale of passion' → FAISS returns literary
-    fiction instead of romance novels).
+    Genre-dominant moods bypass LLM expansion to preserve FAISS precision.
     """
     mood_lower = mood.lower().strip()
 
@@ -1539,13 +1428,9 @@ def _build_semantic_query(mood: str, context: dict, use_llm: bool = True) -> str
     key_terms = [w for w in words if w not in _PROSE_STOP]
     return " ".join(key_terms[:20]) if key_terms else mood_lower
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # READING-TIME RECOMMENDATION
 # Uses page count (when available) to return books that genuinely fit the
 # reading window.  Falls back gracefully to genre+semantic when no page data.
-# ═══════════════════════════════════════════════════════════════════════════════
-
 # Page-count bands for each reading-time key.
 # Averages: ~1 page/min relaxed reading → 30 min ≈ ≤200 p, 2 h ≈ 200-400 p
 _READING_TIME_PAGES: dict[str, tuple[int, int]] = {
@@ -1569,7 +1454,6 @@ _LONG_TITLE_SIGNALS = [
     "saga", "epic", "complete", "collection", "trilogy", "chronicles",
     "omnibus", "boxed", "boxset", "volume", "series", "compendium",
 ]
-
 
 def _page_length_score(row_idx: int, reading_time_key: str) -> float:
     """
@@ -1611,7 +1495,6 @@ def _page_length_score(row_idx: int, reading_time_key: str) -> float:
         if tags & {"epic-fantasy","high-fantasy","classics","history"}: return 0.8
         if tags & _SHORT_BOOK_GENRES:  return 0.15
         return 0.5
-
 
 def recommend_by_reading_time(
     reading_time_key: str,
@@ -1676,12 +1559,7 @@ def recommend_by_reading_time(
     chosen = list(sorted_idx[:top_n])
     return _rows_to_dicts_fast(chosen)
 
-
-
-
-
 _READING_TIME_KEYS = {"30 minutes", "2 hours", "weekend"}
-
 
 def recommend_by_mood_semantic(
     mood:        str,
@@ -1705,7 +1583,6 @@ def recommend_by_mood_semantic(
         if len(result) >= max(4, top_n // 3):
             return result
         # Not enough results — fall through to standard semantic path
-
     ctx            = context or {}
     semantic_query = _build_semantic_query(mood, ctx, use_llm=use_llm)
     force_blend    = _is_genre_dominant(mood)
@@ -1721,13 +1598,7 @@ def recommend_by_mood_semantic(
         force_genre_blend=force_blend,
         genre_filter=genre_filter, offset=offset,
     )
-
-
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # GENRE BROWSE
-# ═══════════════════════════════════════════════════════════════════════════════
 
 _GENRE_TAG_MAP = {
     "romance": {
@@ -1851,8 +1722,7 @@ _GENRE_MIN_RATINGS = {
 
 def _score_genre_match(tags: list[str], approved: set) -> float:
     """
-    FIX BUG 15: Substring match replaced with exact-token match to prevent
-    'fiction' inside 'science-fiction' giving false romance hits.
+    Uses exact-token match to prevent substring false positives.
     """
     if not tags: return 0.0
     real_tags = [t for t in tags if t not in _SHELF_TAGS]
@@ -1878,7 +1748,6 @@ def _score_genre_match(tags: list[str], approved: set) -> float:
         _ = matched  # suppress unused warning
     return min(1.0, hits / len(real_tags))
 
-
 _GENRE_CANONICAL: dict[str, str] = {
     "science fiction":"science fiction","science-fiction":"science fiction",
     "sci-fi":"science fiction","scifi":"science fiction","sf":"science fiction",
@@ -1894,7 +1763,6 @@ _GENRE_CANONICAL: dict[str, str] = {
     "vampires":"paranormal","werewolves":"paranormal","witches":"paranormal",
     "humor":"comedy","humour":"comedy","funny":"comedy","satire":"comedy",
 }
-
 def recommend_by_genre(genre: str, top_n: int = 9999) -> list[dict]:
     if not genre: return []
     g_raw  = genre.lower().strip()
@@ -1945,13 +1813,11 @@ def recommend_by_genre(genre: str, top_n: int = 9999) -> list[dict]:
         filtered = books[mask2].copy()
         filtered["_genre_score"] = scores_arr[mask2]
         print(f"[recommend_by_genre] relaxed popularity gate: {len(filtered)} books")
-
     if len(filtered) < 5:
         any_pos  = scores_arr > 0
         filtered = books[any_pos].copy()
         filtered["_genre_score"] = scores_arr[any_pos]
         print(f"[recommend_by_genre] relaxed threshold: {len(filtered)} books")
-
     if filtered.empty:
         print(f"[recommend_by_genre] WARNING: empty result for {g!r}")
         return []
@@ -1962,22 +1828,16 @@ def recommend_by_genre(genre: str, top_n: int = 9999) -> list[dict]:
         * (filtered["rating_count"].astype(float) ** 0.6)
     )
     filtered = filtered.sort_values("_final_score", ascending=False)
-
     if g == "romance":
         classic_mask = filtered["title_clean"].apply(
             lambda t: any(c in str(t) for c in _ROMANCE_CLASSICS_TITLES)
         )
         filtered = pd.concat([filtered[classic_mask], filtered[~classic_mask]])
-
     result = _rows_to_dicts_parallel(filtered, min(top_n, len(filtered)))
     print(f"[recommend_by_genre] returning {len(result)} books for genre={g!r}")
     return result
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # AUTHOR / TITLE / DESCRIPTION
-# ═══════════════════════════════════════════════════════════════════════════════
-
 @lru_cache(maxsize=256)
 def recommend_by_author(author: str, top_n: int = 20) -> list:
     if not author: return []
@@ -1989,15 +1849,11 @@ def recommend_by_author(author: str, top_n: int = 20) -> list:
         filtered.assign(_score=score).sort_values("_score", ascending=False), top_n
     )
 
-
 def recommend_by_title(title: str, top_n: int = 10) -> list:
-    """
-    FIX BUG 1 + BUG 9: Guard cosine_sim shape before use; handle sparse matrix.
-    """
+    
     if not title: return []
     idx = _title_to_idx(title)
     if idx is None: return []
-
     # Shape guard: cosine_sim may be NxN from a different-sized dataset snapshot
     if (cosine_sim is not None
             and hasattr(cosine_sim, "shape")
@@ -2016,7 +1872,6 @@ def recommend_by_title(title: str, top_n: int = 10) -> list:
     top_idxs  = np.argsort(sims)[::-1][:top_n]
     valid     = top_idxs[sims[top_idxs] > 0]
     return _rows_to_dicts_parallel(books.iloc[valid], top_n)
-
 
 def recommend_by_description(
     description:  str,
@@ -2038,11 +1893,7 @@ def recommend_by_description(
     valid    = top_idxs[sims[top_idxs] > 0]
     return _rows_to_dicts_parallel(books.iloc[valid], top_n)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SAVED + LIKED / COLLABORATIVE / TRENDING
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def _seed_titles_to_query(seed_titles: list[str]) -> str:
     """Fallback (no LLM) — build query from book descriptions."""
     desc_parts = []
@@ -2057,9 +1908,7 @@ def _seed_titles_to_query(seed_titles: list[str]) -> str:
                 desc_parts.append(genre)
     return " ".join(desc_parts) if desc_parts else " ".join(seed_titles[:5])
 
-
 # ── LLM taste-profile prompts ─────────────────────────────────────────────────
-
 _TASTE_SYSTEM_PROMPT = (
     "You are a book recommendation engine. Analyse the list of books a reader "
     "has liked, saved, or read. Identify the common threads: themes, emotional "
@@ -2081,11 +1930,9 @@ def _build_taste_profile(
     ))[:8]
     if not all_seeds:
         return ""
-
     cache_key = "taste::" + "|".join(sorted(all_seeds[:6]))
     if cache_key in _llm_query_cache:
         return _llm_query_cache[cache_key]
-
     book_lines = []
     for title in all_seeds[:8]:
         idx = _title_to_idx(title)
@@ -2101,17 +1948,14 @@ def _build_taste_profile(
         elif genre:
             line += f" ({genre})"
         book_lines.append(line)
-
     genre_hint = ""
     if user_genres:
         genre_hint = f"\nThe reader says they enjoy: {', '.join(user_genres[:3])}."
-
     user_prompt = (
         f"Books this reader has liked or read:{genre_hint}\n"
         + "\n".join(book_lines)
         + "\n\nDescribe what this reader enjoys and what their next book should feel like:"
     )
-
     for model_name in (_LLM_MODEL, _LLM_MODEL_FALLBACK):
         try:
             resp = ollama.chat(
@@ -2132,7 +1976,6 @@ def _build_taste_profile(
         except Exception as e:
             print(f"[taste_profile] {model_name}: {e}")
             continue
-
     # LLM unavailable — fall back to description concat
     return _seed_titles_to_query(all_seeds[:5])
 
@@ -2162,7 +2005,6 @@ def recommend_from_saved_liked(
         read_titles=read_titles,
         user_genres=user_genres,
     )
-
     # If a specific book triggered this call, blend taste profile with book context
     if context_title:
         ctx_idx = _title_to_idx(context_title)
@@ -2178,7 +2020,6 @@ def recommend_from_saved_liked(
             top_n=top_n,
             exclude_titles={t.lower() for t in all_seeds},
         )
-
     # TF-IDF fallback
     seed_indices = _titles_to_indices(all_seeds)
     if not seed_indices: return []
@@ -2189,7 +2030,6 @@ def recommend_from_saved_liked(
     seed_set = set(seed_indices)
     chosen   = [i for i in top_idxs if i not in seed_set and scores[i] > 0][:top_n]
     return _rows_to_dicts_parallel(books.iloc[chosen], top_n)
-
 
 def book_recommender(user_id: int, top_n: int = 10) -> list:
     user_rated = set(ratings[ratings["user_id"] == user_id]["book_id"].values)
@@ -2224,15 +2064,10 @@ def book_recommender(user_id: int, top_n: int = 10) -> list:
               for bid, score in preds[:top_n] if int(bid) in _book_id_to_idx}
     return _rows_to_dicts_parallel(books.iloc[chosen], top_n, pr)
 
-
 def trending_books(top_n: int = 20) -> list:
     return _rows_to_dicts_parallel(books.iloc[_trending_order[:top_n]], top_n)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # SEARCH AUTOCOMPLETE
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def search_autocomplete(query: str, limit: int = 10) -> list:
     if not query or not query.strip(): return []
     q = query.lower().strip()
@@ -2254,11 +2089,7 @@ def search_autocomplete(query: str, limit: int = 10) -> list:
     ranked["_s"] = ranked["average_rating"] * (ranked["rating_count"].astype(float) ** 0.3)
     return _rows_to_dicts_parallel(ranked.sort_values("_s", ascending=False), limit)
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # NEW RELEASES / HYBRID
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def fetch_new_releases(max_results: int = 20) -> list | dict:
     queries = ["subject:fiction","subject:thriller","subject:romance","subject:fantasy","subject:mystery"]
 
@@ -2318,7 +2149,6 @@ def fetch_new_releases(max_results: int = 20) -> list | dict:
     results.sort(key=lambda b: b.get("published_date", ""), reverse=True)
     return results[:max_results]
 
-
 def hybrid_recommend(
     user_id:      int        | None = None,
     title:        str        | None = None,
@@ -2342,15 +2172,10 @@ def hybrid_recommend(
             pass
     return trending_books(top_n)
 
-
 def trending_and_new_books(top_n: int = 20, new_n: int = 20) -> dict:
     return {"trending": trending_books(top_n), "new": fetch_new_releases(new_n)}
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # TIME + SEASON + SMART HOME
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def get_current_season() -> str:
     m = datetime.now().month
     return ("winter" if m in (12, 1, 2) else "spring" if m in (3, 4, 5)
@@ -2404,7 +2229,6 @@ def get_time_slot() -> str:
 def _build_label_message(time_slot: str, season: str) -> tuple[str, str]:
     tc = _TIME_CONFIG[time_slot]; sc = _SEASON_CONFIG[season]
     return f"{tc['label']}  ·  {sc['label']}", f"{tc['message']} — {sc['message'].lower()}"
-
 
 def smart_home_recommendations(
     liked_titles: list | None = None,
@@ -2480,11 +2304,7 @@ def smart_home_recommendations(
         "sections":    sections,
     }
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # STATUS
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def _check_ollama() -> str:
     try:
         models = [m["name"] for m in ollama.list().get("models", [])]
@@ -2509,48 +2329,38 @@ def get_recommender_status() -> dict:
         "ollama_status":      _check_ollama(),
         "romance_index_size": len(_GENRE_INDEX.get("romance", [])),
     }
-#ratings
  
 def get_rating_weight(user_id: int, csv_book_id: int, db: Session) -> float:
     # Resolve CSV book_id → Book DB primary key
     book_result = db.execute(
         select(Book.id).where(Book.book_id == csv_book_id)
     ).scalar_one_or_none()
- 
     if not book_result:
         return 1.0  # book not in DB — neutral
  
     book_pk = book_result
- 
     rating_entry = db.execute(
         select(Rating).where(
             Rating.user_id == user_id,
             Rating.book_id == book_pk,
         )
     ).scalar_one_or_none()
- 
     if not rating_entry:
         return 1.0
- 
     weight_map = {5: 1.5, 4: 1.2, 3: 1.0, 2: 0.6, 1: 0.3}
     return weight_map.get(rating_entry.rating, 1.0)
  
- 
 def get_all_user_rating_weights(user_id: int, db: Session) -> dict[int, float]:
-   
     rows = db.execute(
         select(Book.book_id, Rating.rating)
         .join(Rating, Rating.book_id == Book.id)
         .where(Rating.user_id == user_id)
     ).all()
- 
     weight_map = {5: 1.5, 4: 1.2, 3: 1.0, 2: 0.6, 1: 0.3}
     return {
         int(row.book_id): weight_map.get(row.rating, 1.0)
         for row in rows
     }
- 
- 
 def apply_rating_weights(candidates: list, user_id: int, db: Session) -> list:
     if not candidates or not user_id:
         return candidates

@@ -6,15 +6,12 @@ from google.auth.transport import requests as google_requests
 
 load_dotenv()
 
-
 def verify_google_token(token: str) -> dict | None:
    
-    # FIX 1: Read at call time, not import time
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     if not client_id:
         raise RuntimeError(
             "GOOGLE_CLIENT_ID is not set in your .env file."
-           
         )
 
     try:

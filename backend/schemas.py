@@ -1,7 +1,6 @@
 # schemas.py
 from datetime import datetime
 from typing import Any, List, Optional
-
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 class BookShort(BaseModel):
@@ -16,8 +15,6 @@ class BookShort(BaseModel):
     predicted_rating: Optional[float] = None
 
     model_config = {"from_attributes": True}
-
-
 class BookCreate(BaseModel):
     book_id:          int
     title:            str
@@ -29,7 +26,6 @@ class BookCreate(BaseModel):
     rating_count:     int            = 0
     publication_year: Optional[int]  = None
 
-
 class BookResponse(BookCreate):
     id:         int
     created_at: datetime
@@ -37,11 +33,9 @@ class BookResponse(BookCreate):
 
     model_config = {"from_attributes": True}
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  AUTH
 # ══════════════════════════════════════════════════════════════════════════════
-
 class RegisterRequest(BaseModel):
     username:        str            = Field(..., min_length=3, max_length=80)
     password:        str            = Field(..., min_length=8)
@@ -52,26 +46,20 @@ class RegisterRequest(BaseModel):
         None,
         description="Integer user_id from ratings_processed.csv — enables SVD filtering"
     )
-
-
 class LoginRequest(BaseModel):
     identifier: str = Field(..., description="Username or email address")
     password:   str = Field(..., min_length=1)
 
-
 class RefreshRequest(BaseModel):
     refresh_token: str = Field(...)
-
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(..., min_length=1)
     new_password:     str = Field(..., min_length=8)
 
-
 class AccessTokenResponse(BaseModel):
     access_token: str
     token_type:   str = "bearer"
-
 
 class TokenResponse(BaseModel):
     access_token:  str

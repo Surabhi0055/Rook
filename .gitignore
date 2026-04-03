@@ -48,24 +48,13 @@ venv.bak/
 rook.db
 
 # ─── ML MODELS (large binary files) ─────────────────────────
-# ⚠️  These are large — use Git LFS or host separately
 models/*.pkl
 models/*.index
 models/*.npy
 models/*.bin
-# Uncomment below to track them with Git LFS instead:
-# !models/svd_model.pkl
-# !models/tfidf_vectorizer.pkl
-# !models/cosine_sim.pkl
-# !models/book_faiss.index
-# !models/book_meta.pkl
 
 # ─── DATASET (large CSV files) ───────────────────────────────
-# ⚠️  Add to LFS or document download instructions
 dataset/*.csv
-# Uncomment to include:
-# !dataset/books_genre.csv
-# !dataset/ratings_processed.csv
 
 # ─── UPLOADS (user-generated content) ────────────────────────
 uploads/

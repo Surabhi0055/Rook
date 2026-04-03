@@ -101,7 +101,6 @@ class _ContextRequestWithOffset(BaseModel):
     offset:       int            = Field(0, ge=0)
 
 
-# NEW — replaces the old SavedLikedRequest which lacked LLM context fields
 class _SavedLikedRequest(BaseModel):
     liked_titles:  List[str]      = []
     saved_titles:  List[str]      = []

@@ -172,7 +172,7 @@ async def upload_image(
     await db.commit()
     await db.refresh(user)
 
-    return schemas.UserResponse.model_validate(user)  # ✅ was missing
+    return schemas.UserResponse.model_validate(user) 
 # ══════════════════════════════════════════════════════════════════════════════
 #  RATINGS
 # ══════════════════════════════════════════════════════════════════════════════

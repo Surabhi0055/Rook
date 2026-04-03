@@ -12,11 +12,8 @@ import TopRatedPage, { TopRatedSection } from "./TopRatedPage"
 import { YourRatingsPage } from "./YourRatingsPage"
 import { useApp } from '../context/AppContext'
 import StarRating from "../components/StarRating"
- 
-// ── Shared image utilities (single source of truth, queued, cached) ──────────
 import { cleanImageUrl, fetchGBCover, CoverImg } from '../utils/imageUtils'
  
-// ── These small helpers remain in Home.jsx ───────────────────────────────────
 function olCover(book, size = 'L') {
   const isbn = book.isbn_13 || book.isbn_10 || book.isbn || ''
   if (isbn) {
@@ -33,9 +30,7 @@ function olCover(book, size = 'L') {
   if (coverId) return `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg`
   return ''
 }
- 
-// fixCovers: just upgrades existing URLs, no fetch needed
-function fixCovers(books) {
+ function fixCovers(books) {
   return (books || []).map(b => {
     if (!b) return b
     const existing = cleanImageUrl(b.image_url || '')
@@ -45,18 +40,15 @@ function fixCovers(books) {
     return b
   })
 }
- 
 function getServerOrigin() {
   try { return new URL(API_BASE).origin } catch { return API_BASE }
 }
- 
 function makeAbsoluteImageUrl(raw) {
   if (!raw) return ''
   if (raw.startsWith('http')) return raw
   return `${getServerOrigin()}${raw}`
 }
 
-// ── FIXED: resolve best cover for a book using imageUtils fetchGBCover ────────
 async function resolveBookCoverAsync(book) {
   // 1. Try stored URL first
   const stored = cleanImageUrl(book.image_url || '')
@@ -72,9 +64,7 @@ async function resolveBookCoverAsync(book) {
   return ''
 }
 
-// ── FIXED: 24-hour genre rotation carousel shuffle ────────────────────────────
-// Genres rotate every 24h; within the same day the same genre order is used
-// so the carousel feels consistent per day but different each day.
+// Genres rotate every 24h; within the same day the same genre order is used so the carousel feels consistent per day but different each day.
 const CAROUSEL_GENRES = [
   'fiction', 'fantasy', 'mystery', 'thriller', 'romance',
   'science fiction', 'biography', 'history', 'horror', 'classics',
@@ -111,8 +101,7 @@ function saveCarouselCache(books, genre) {
 
 // Pick today's genre deterministically from day string
 function getTodayGenre() {
-  const day = getDayKey() // e.g. "2025-04-01"
-  // Sum char codes to get a stable numeric seed for today
+  const day = getDayKey() 
   const seed = day.split('').reduce((s, c) => s + c.charCodeAt(0), 0)
   return CAROUSEL_GENRES[seed % CAROUSEL_GENRES.length]
 }
@@ -149,7 +138,6 @@ function isBlocked(titleLower) {
   return _BLOCKED.some(p => titleLower.startsWith(p) || titleLower.includes(p))
 }
 
-// ── FIXED: stricter metadata/stub description detection ──────────────────────
 function isMetadataDesc(desc) {
   if (!desc) return true
   const trimmed = desc.trim()
@@ -393,7 +381,6 @@ const MOOD_DATA = {
   },
 }
 
-
 const SEASON_DATA = {
   summer: {
     label: "Summer",
@@ -497,9 +484,7 @@ const TS_SLOTS = [
   { slot:'late_night', hours:[0,1,2,3,4], label:'Past Midnight', sub:'For those who stay up too late reading.', mood:'late_night', genres:['horror','thriller','sci-fi','crime'] },
 ]
 
-/* ═══════════════════════════════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════════════════════════════ */
+  //  HELPERS
 function dedupBooks(books) {
   const seen = new Set()
   const deduped = (books||[]).filter(b => {
@@ -529,9 +514,7 @@ function _saveActions(a){try{localStorage.setItem(_TRACKER_KEY,JSON.stringify(a.
 function trackAction(type,book){if(!book?.title)return;const a=_loadActions();a.push({type,title:book.title,authors:book.authors||'',genre:book.genre||'',ts:Date.now()});_saveActions(a)}
 function getTopGenres(limit=5){const freq={};_loadActions().forEach(a=>{(a.genre||'').split(',').map(g=>g.trim().toLowerCase()).filter(Boolean).forEach(g=>{freq[g]=(freq[g]||0)+(a.type==='liked'?3:a.type==='read'?2:1)})});return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,limit).map(([g])=>g)}
 
-/* ═══════════════════════════════════════════════════════════════
-   TIME-BASED GREETING
-═══════════════════════════════════════════════════════════════ */
+  //  TIME-BASED GREETING
 function getTimeGreeting(name) {
   const hour = new Date().getHours()
   let greeting
@@ -553,9 +536,7 @@ function getTimeGreeting(name) {
   return { greeting }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   API ENGINE
-═══════════════════════════════════════════════════════════════ */
+  //  API ENGINE
 const _cache=new Map(); const _TTL=30*60_000
 function _ck(t,p){return t+'::'+JSON.stringify(p).slice(0,200)}
 function _cGet(k){
@@ -626,10 +607,7 @@ async function fetchPersonalised({likedTitles=[],savedTitles=[],readTitles=[],us
   if(userGenres[0]){try{return await fetchGenre(userGenres[0],top_n,signal)}catch{}}
   return fetchTrending(top_n)
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   HOOKS
-═══════════════════════════════════════════════════════════════ */
+  //  HOOKS
 function useInView(rootMargin='300px'){
   const ref=useRef(null); const [inView,setInView]=useState(false)
   useEffect(()=>{
@@ -641,9 +619,7 @@ function useInView(rootMargin='300px'){
   return[ref,inView]
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MICRO COMPONENTS
-═══════════════════════════════════════════════════════════════ */
+  //  MICRO COMPONENTS
 function Toast({msg}){if(!msg)return null;return<div className="toast show">{msg}</div>}
 function SectionLabel({eyebrow,title,accent='var(--gold)',children}){
   return(
@@ -666,10 +642,8 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
   const [idx, setIdx] = useState(0)
   const [loading, setLoading] = useState(true)
   const timer = useRef(null)
- 
   useEffect(() => {
     let cancelled = false
-
     async function load() {
       const cached = loadCarouselCache()
       if (cached && cached.books && cached.books.length >= 6) {
@@ -680,7 +654,6 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
         }
         return
       }
-
       try {
         const todayGenre = getTodayGenre()
         const daySeed    = getDaySeed()
@@ -690,9 +663,7 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
             .catch(() => []),
           apiFetch(`${API_BASE}/trending?top_n=60`).catch(() => []),
         ])
-
         if (cancelled) return
-
         const seen = new Set()
         const merged = []
         for (const b of [...(Array.isArray(genreRaw) ? genreRaw : []), ...(Array.isArray(trendingRaw) ? trendingRaw : [])]) {
@@ -701,12 +672,9 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
           seen.add(k)
           merged.push(b)
         }
-
         const shuffled = seededShuffle(merged, daySeed)
-
         const candidates = []
-        const BATCH = 8 // process 8 at a time, take first 20 with images
-
+        const BATCH = 8 // process 8 at a time, take first 20 with image
         for (let i = 0; i < shuffled.length && candidates.length < 20; i += BATCH) {
           if (cancelled) return
           const batch = shuffled.slice(i, i + BATCH)
@@ -719,13 +687,11 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
               const fastUrl = stored || ol
 
               if (fastUrl) return { ...book, image_url: fastUrl }
-
               // 2. Fetch from Google Books via imageUtils queue
               try {
                 const gb = await fetchGBCover(book.title || '', book.authors || '')
                 if (gb) return { ...book, image_url: gb }
               } catch {}
-
               // No image found — exclude
               return null
             })
@@ -750,19 +716,16 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
     load()
     return () => { cancelled = true }
   }, [])
- 
   useEffect(() => {
     if (!books.length) return
     timer.current = setInterval(() => setIdx(i => (i + 1) % books.length), 7000)
     return () => clearInterval(timer.current)
   }, [books.length])
- 
   function goTo(i) {
     clearInterval(timer.current)
     setIdx(i)
     timer.current = setInterval(() => setIdx(p => (p + 1) % books.length), 7000)
   }
- 
   if (loading) {
     return (
       <div className="hero-section" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 420 }}>
@@ -774,21 +737,16 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
       </div>
     )
   }
- 
   if (!books.length) return (
     <div className="hero-section" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 420 }}>
       <p style={{ color: 'rgba(240,233,227,0.35)', fontFamily: 'Montaga,serif' }}>Start your backend to load content</p>
     </div>
   )
- 
-  const b = books[idx]
-  // Image is guaranteed — we only put books with images in the array
-  const heroUrl = b.image_url || ''
 
-  // ── FIXED: strip metadata descriptions ───────────────────────
+  const b = books[idx]
+  const heroUrl = b.image_url || ''
   const rawDesc = b.description || ''
   const displayDesc = isMetadataDesc(rawDesc) ? '' : rawDesc
-
   const genres = (b.genre || '').split(',').map(g => g.trim()).filter(Boolean).slice(0, 3)
   const isSaved = savedSet?.has(b.title)
   const isWished = wishedSet?.has(b.title)
@@ -806,7 +764,6 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
               {genres.map(g => <span key={g} className="hero-chip">{g}</span>)}
               {b.average_rating && <span className="hero-chip">{Number(b.average_rating).toFixed(1)} ★</span>}
             </div>
-            {/* FIXED: only show description if it's real prose, not metadata */}
             {displayDesc && (
               <p className="hero-desc">
                 {displayDesc.slice(0, 260)}{displayDesc.length > 260 ? '…' : ''}
@@ -828,7 +785,6 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
             </div>
           </div>
           <div className="hero-right">
-            {/* FIXED: Always show cover — every book in array has a verified image */}
             <div className="hero-cover-wrap" onClick={() => onOpen(b)} style={{ cursor: 'pointer' }}>
               <img
                 src={heroUrl}
@@ -878,9 +834,7 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SEARCH BAR
-═══════════════════════════════════════════════════════════════ */
+  //  SEARCH BAR
 function SearchBar({onSearch,onOpenBook,userName}){
   const[query,setQuery]=useState(''); const[acItems,setAcItems]=useState([]); const[acOpen,setAcOpen]=useState(false)
   const wrapRef=useRef(null); const timer=useRef(null)
@@ -903,6 +857,7 @@ function SearchBar({onSearch,onOpenBook,userName}){
       </div>
       <div className="home-search-center">
         <h2 className="home-tagline">Discover Your Next Great Read</h2>
+        <p className="home-tagline-sub">Search by title, author, genre or describe what you feel like reading</p>
         <div ref={wrapRef} style={{position:'relative',width:'100%',maxWidth:680,margin:'0 auto'}}>
           <div className="home-sw">
             <input className="home-search" type="text" placeholder="Search title, author or describe a mood…" value={query}
@@ -938,9 +893,7 @@ function SearchBar({onSearch,onOpenBook,userName}){
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   GENERIC LAZY SECTION
-═══════════════════════════════════════════════════════════════ */
+  //  GENERIC LAZY SECTION
 function LazySection({eyebrow,title,accent='var(--gold)',fetchFn,extraStyle,children}){
   const[books,setBooks]=useState([]); const[loading,setLoading]=useState(true)
   const[ref,inView]=useInView(); const fetched=useRef(false)
@@ -958,9 +911,7 @@ function LazySection({eyebrow,title,accent='var(--gold)',fetchFn,extraStyle,chil
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   PERSONALISED SECTIONS
-═══════════════════════════════════════════════════════════════ */
+  //  PERSONALISED SECTIONS
 function BecauseYouSection({seedBook,label,accent='#e06080',likedTitles,savedTitles}){
   const[books,setBooks]=useState([]); const[loading,setLoading]=useState(true)
   const[ref,inView]=useInView('200px')
@@ -1105,9 +1056,7 @@ function YouMightLike({likedBooks,savedBooks,readBooks,wishlistBooks}){
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   POPULAR NOW
-═══════════════════════════════════════════════════════════════ */
+  //  POPULAR NOW
 const POPULAR_SEARCHES = [
   "harry potter sorcerer's stone", 'sherlock holmes', 'pride and prejudice','jane austen sense sensibility', 'to kill a mockingbird', 'the great gatsby','lord of the rings', 'agatha christie murder orient express','game of thrones', 'dune frank herbert', '1984 george orwell','the alchemist paulo coelho', 'little women', 'jane eyre charlotte bronte',
   'gone with the wind', 'the count of monte cristo', 'les miserables','crime and punishment dostoevsky', 'war and peace tolstoy','wuthering heights emily bronte', 'great expectations dickens','the catcher in the rye', 'of mice and men steinbeck','the hobbit tolkien', 'brave new world huxley',
@@ -1167,9 +1116,7 @@ function PopularNowSection({onNav}){
     </section>
   )
 }
-/* ═══════════════════════════════════════════════════════════════
-   RIGHT NOW
-═══════════════════════════════════════════════════════════════ */
+  //  RIGHT NOW
 function RightNow(){
   const slot=useMemo(()=>getTsSlot(),[])
   const[books,setBooks]=useState([]); const[loading,setLoading]=useState(true)
@@ -1190,9 +1137,7 @@ function RightNow(){
     </section>
   )
 }
-/* ═══════════════════════════════════════════════════════════════
-   MOOD SECTION
-═══════════════════════════════════════════════════════════════ */
+  //  MOOD SECTION
 function MoodSection({isLight}){
   const hour=new Date().getHours()
   const def=hour<8?'reflective':hour<12?'intellectual':hour<17?'adventurous':hour<21?'cosy':'dreamy'
@@ -1271,7 +1216,6 @@ function MoodSection({isLight}){
     </section>
   )
 }
-
 function SeasonSection({ isLight }) {
   const [active, setActive] = useState(detectSeason)
   const [books, setBooks] = useState([])
@@ -1287,12 +1231,9 @@ function SeasonSection({ isLight }) {
     }
     return (h >>> 0).toString(36)
   }
- 
-  // ── Fetch books for one season ────────────────────────────────────────
   async function fetchSeasonBooks(key) {
     const sd = SEASON_DATA[key]
     const cacheKey = `season_${key}_${termsHash(sd)}`
- 
     // 1. Check sessionStorage cache (busts automatically when terms change)
     const cached = _cGet(cacheKey)
     if (cached && cached.length > 0) {
@@ -1346,7 +1287,6 @@ function SeasonSection({ isLight }) {
     return final
   }
  
-  // ── Load active season on inView or tab change ────────────────────────
   useEffect(() => {
     if (!inView) return
     let cancelled = false
@@ -1427,11 +1367,9 @@ function SeasonSection({ isLight }) {
       </svg>
     ),
   }
- 
   const s = SEASON_DATA[active]
   const bg = isLight ? s.bgLight : s.bgDark
   const accent = isLight ? s.accentLight : s.accentDark
- 
   return (
     <section id="seasonSection" style={{ paddingBottom: 8, background: bg, transition: 'background 0.8s ease' }} ref={ref}>
       <div className="season-banner">
@@ -1483,9 +1421,7 @@ function SeasonSection({ isLight }) {
     </section>
   )
 }
-/* ═══════════════════════════════════════════════════════════════
-   WEEKEND GATEWAY
-═══════════════════════════════════════════════════════════════ */
+  //  WEEKEND GATEWAY
 function WeekendGateway(){
   const[active,setActive]=useState('quick')
   const[books,setBooks]=useState([]); const[loading,setLoading]=useState(false)
@@ -1517,9 +1453,7 @@ function WeekendGateway(){
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   TRAVEL SECTION
-═══════════════════════════════════════════════════════════════ */
+  //  TRAVEL SECTION
 function TravelSection(){
   const[active,setActive]=useState('flight')
   const[books,setBooks]=useState([]); const[loading,setLoading]=useState(false)
@@ -1559,10 +1493,7 @@ function TravelSection(){
     </section>
   )
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   AUTHORS ROW
-═══════════════════════════════════════════════════════════════ */
+  //  AUTHORS ROW
 function AuthorsRow({onNav,onAuthor}){
   return(
     <section className="home-section home-section-dark">
@@ -1580,10 +1511,7 @@ function AuthorsRow({onNav,onAuthor}){
     </section>
   )
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   CATEGORIES GRID
-═══════════════════════════════════════════════════════════════ */
+  //  CATEGORIES GRID
 function CategoryCard({cat, onSearch}){
   const[imgFailed,setImgFailed]=useState(false)
   const[hov,setHov]=useState(false)
@@ -1646,18 +1574,12 @@ function CategoriesGrid({onSearch}){
     </section>
   )
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   RECENTLY VIEWED
-═══════════════════════════════════════════════════════════════ */
+//   RECENTLY VIEWED
 function RecentlyViewed({books,onClear}){
   if(!books.length)return null
   return(<section className="home-section"><SectionLabel title="Recently Viewed"><button className="hs-link" onClick={onClear}>Clear</button></SectionLabel><BookRow books={books.slice(0,12)} loading={false}/></section>)
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   SEARCH RESULTS
-═══════════════════════════════════════════════════════════════ */
+  //  SEARCH RESULTS
 function SearchResultsPage({query,onOpen}){
   const[books,setBooks]=useState([]); const[loading,setLoading]=useState(true)
   const normQ=(query||'').trim().toLowerCase()
@@ -1686,10 +1608,7 @@ function SearchResultsPage({query,onOpen}){
     </div>
   )
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   NAVBAR
-═══════════════════════════════════════════════════════════════ */
+  //  NAVBAR
 function Navbar({currentPage,onNav,onToggle,savedCount,wishCount,isLight,onTheme,userName,userInitial,onLogoClick,profileImageUrl}){
   const links=[{key:'home',label:'Home'},{key:'genre',label:'Genre'},{key:'author',label:'Author'},{key:'trending',label:'Trending'},{key:'foryou',label:'For You'},{key:'description',label:'Describe'}]
   return(
@@ -1731,10 +1650,7 @@ function Navbar({currentPage,onNav,onToggle,savedCount,wishCount,isLight,onTheme
     </header>
   )
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   SIDEBAR
-═══════════════════════════════════════════════════════════════ */
+  //  SIDEBAR
 function Sidebar({isDesktop,sidebarOpen,sidebarCollapsed,onClose,onNav,onGenre,profileImageUrl,userName}){
   const[genreOpen,setGenreOpen]=useState(true); const[recOpen,setRecOpen]=useState(false)
   const isVisible=isDesktop||sidebarOpen; const isCollapsed=isDesktop&&sidebarCollapsed; const w=isCollapsed?62:230
@@ -1804,9 +1720,7 @@ function Sidebar({isDesktop,sidebarOpen,sidebarCollapsed,onClose,onNav,onGenre,p
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   LIBRARY PAGE
-═══════════════════════════════════════════════════════════════ */
+  //  LIBRARY PAGE
 function LibraryPage({title,books,accent,onClearAll,emptyMsg}){
   const[q,setQ]=useState('')
   const filtered=q.trim()?books.filter(b=>(b.title||'').toLowerCase().includes(q.toLowerCase())||(b.authors||'').toLowerCase().includes(q.toLowerCase())):books
@@ -1827,9 +1741,7 @@ function LibraryPage({title,books,accent,onClearAll,emptyMsg}){
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   PROFILE PAGE
-═══════════════════════════════════════════════════════════════ */
+  //  PROFILE PAGE
 function ProfilePage({
   savedBooks, likedBooks, wishlistBooks, recentBooks, readBooks,
   onNav, onLogout, userName, profileImageUrl, onImageUploaded, onNameSaved
@@ -1956,7 +1868,6 @@ function ProfilePage({
     </div>
   )
 }
-
 const _MANGA_AUTHOR_SIGNALS = ['toriyama','oda','kishimoto','kubo','arakawa','isayama','takeuchi','togashi','takahashi','miura','ito','inoue','tezuka','otomo','shirow','fujimoto','gege akutami','akutami','horikoshi','murata','one','araki','adachi','urasawa','obata','ohba','yuki midorikawa','midorikawa']
 const _MANGA_TITLE_SIGNALS = ['naruto','bleach','one piece','dragon ball','fullmetal','attack on titan','death note','my hero academia','demon slayer','jujutsu','chainsaw man','hunter x hunter','yu yu hakusho','fairy tail','sword art','tokyo ghoul','sailor moon','cardcaptor','evangelion','cowboy bebop','berserk','vagabond','slam dunk','ranma','inuyasha','black clover','dr stone','vinland saga','spy x family','blue period','a silent voice','your lie in april','fruits basket','nana','ouran','clannad','angel beats']
 function _isManga(b){const t=(b.title||'').toLowerCase();const a=(b.authors||'').toLowerCase();const g=(b.genre||'').toLowerCase();if(_MANGA_TITLE_SIGNALS.some(s=>t.includes(s)))return true;if(_MANGA_AUTHOR_SIGNALS.some(s=>a.includes(s)))return true;if(g.includes('manga')||g.includes('anime'))return true;return false}
@@ -2049,9 +1960,7 @@ function SimilarBooksPage({seedBook,onOpen,onBack}){
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   HOME (main export)
-═══════════════════════════════════════════════════════════════ */
+  //  HOME (main export)
 export default function Home() {
   const navigate = useNavigate()
   const { setHandleAuthor, modalBook, setModalBook, readBooks, setReadBooks } = useApp()
@@ -2127,7 +2036,6 @@ export default function Home() {
   const sbW = isDesktop ? (sidebarCollapsed ? 62 : 230) : 0
   const knownPages = ['home','genre','author','trending','foryou','description','search','saved','wishlist','liked','profile','read','similar','ratings','toprated']
 
-  // ── FIXED: Enrich modalBook cover using imageUtils before passing to BookModal ──
   const [modalBookResolved, setModalBookResolved] = useState(null)
   useEffect(() => {
     if (!modalBook) { setModalBookResolved(null); return }
@@ -2140,7 +2048,6 @@ export default function Home() {
       }
     }).catch(() => {})
   }, [modalBook?.title, modalBook?.image_url])
-
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg2)', position: 'relative' }}>
       <Sidebar isDesktop={isDesktop} sidebarOpen={sidebarOpen} sidebarCollapsed={sidebarCollapsed} onClose={() => setSidebarOpen(false)} onNav={handleNav} onGenre={handleGenre} profileImageUrl={profileImageUrl} userName={userName}/>
@@ -2212,7 +2119,6 @@ export default function Home() {
           )}
         </div>
       </div>
-      {/* FIXED: modalBookResolved has a guaranteed cover image via resolveBookCoverAsync */}
       {modalBookResolved && (<BookModal book={modalBookResolved} onClose={() => setModalBook(null)} savedSet={savedSet} likedSet={likedSet} wishedSet={wishedSet} onSave={handleSave} onLike={handleLike} onWish={handleWish} onOpen={handleOpen} onAuthor={handleAuthor} API_BASE={API_BASE} apiFetch={apiFetch} onSearch={handleSearch} onSimilar={handleSimilar} onNav={handleNav} bookList={recentBooks} userId={storedUser.id}/>)}
       <Toast msg={toast} />
     </div>

@@ -58,8 +58,6 @@ const TABS = [
   { key:'classics',   label:'Classics' },
   { key:'self-help',  label:'Self-Help' },
 ]
-
-// Same popular searches as Home.jsx Most Popular section
 const POPULAR_SEARCHES = [
   "harry potter sorcerer's stone",'sherlock holmes','pride and prejudice',
   'jane austen sense sensibility','to kill a mockingbird','the great gatsby',

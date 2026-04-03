@@ -358,7 +358,7 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
  
 /* ── BOOK COVER (right side) ─────────────────────────────────── */
 .hero-cover-wrap {
-  width: 260px;                    /* bigger: was 200px */
+  width: 260px;                
   aspect-ratio: 2/3;
   border-radius: 16px;
   overflow: hidden;
@@ -394,7 +394,7 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
   z-index: 3;
   display: flex;
   gap: 6px;
-  padding: 44px 60px 16px;   /* top pad = room for tooltip */
+  padding: 44px 60px 16px;  
   scrollbar-width: none;
   -ms-overflow-style: none;
   background: linear-gradient(to top, rgba(5,2,4,0.92) 0%, transparent 100%);
@@ -403,10 +403,10 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
 .hero-dots::-webkit-scrollbar { display: none; }
  .hero-thumb {
   flex-shrink: 0;
-  width: 58px;                 /* bigger: was 48px */
+  width: 58px;            
   aspect-ratio: 2/3;
   border-radius: 7px;
-  overflow: visible;           /* ← KEY FIX: was overflow:hidden — that clipped tooltip */
+  overflow: visible;        
   cursor: pointer;
   position: relative;
   border: 2px solid transparent;
@@ -445,7 +445,7 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
  
 .hero-thumb-tip {
   position: absolute;
-  bottom: calc(100% + 10px);    /* float above the thumbnail */
+  bottom: calc(100% + 10px);   
   left: 50%;
   transform: translateX(-50%) translateY(4px);
   background: rgba(15, 8, 12, 0.95);
@@ -618,12 +618,11 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
 .ctrl-outline:hover { background:rgba(114,57,63,.25); }
 
 /* ═══════════════════════════════════
-   SCROLL PAD & GRIDS — FIXED
+   SCROLL PAD & GRIDS 
 ═══════════════════════════════════ */
-/* scroll-pad wraps h-row (horizontal) OR bk-grid (vertical grid) */
 .scroll-pad {
-  padding: 80px 28px;      /* large vertical padding = room for popup */
-  margin: -66px 0;         /* cancel the extra space visually */
+  padding: 80px 28px;    
+  margin: -66px 0;       
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: thin;
@@ -632,7 +631,6 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
 .scroll-pad::-webkit-scrollbar { height: 4px; }
 .scroll-pad::-webkit-scrollbar-thumb { background: rgba(114,57,63,.4); border-radius: 2px; }
 
-/* Horizontal row — must have min-width:max-content to scroll */
 .h-row {
   display: flex;
   gap: 14px;
@@ -640,8 +638,6 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
   min-width: max-content;
   overflow: visible;
 }
-
-/* Grid — fills container, no horizontal scroll needed */
 .bk-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -695,11 +691,11 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
 .bk-act-btn {
   width:32px !important;
   height:32px !important;
-  background:#000 !important;          /* solid black */
-  border:2px solid #8b1a2a !important; /* strong maroon border */
+  background:#000 !important;          
+  border:2px solid #8b1a2a !important; 
   border-radius:50% !important;
   cursor:pointer !important;
-  color:#ffffff !important;            /* white icon */
+  color:#ffffff !important;          
   display:flex !important;
   align-items:center !important;
   justify-content:center !important;
@@ -712,7 +708,6 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
   color:#fff !important;
   transform:scale(1.15) !important;
 }.bk-act-btn svg { width:12px; height:12px; flex-shrink:0; pointer-events:none; }
-/* .bk-act-btn:hover { background:#8b1a2a !important; border-color:#c0273a !important; color:#fff !important; transform:scale(1.12) !important; } */
 .bk-act-save.is-saved { background:rgba(60,15,8,0.9) !important; border-color:#c9a84c !important; color:#c9a84c !important; }
 .bk-act-like.is-liked { background:rgba(80,15,25,0.9) !important; border-color:#e57b8b !important; color:#e57b8b !important; }
 .bk-act-wish.is-wished { background:rgba(27, 119, 68, 0.56) !important; border-color:#35785d !important; color:#267e57 !important; }
@@ -1084,7 +1079,6 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
 [data-theme="light"] .ts-tab.active { background: var(--maroon); border-color: var(--maroon); color: #fff; }
 
 /* ── BOOK ROW ────────────────────────────────────────────────── */
-/* The h-row inside #tsBookRow needs hover popup room */
 #tsBookRow { overflow-y: visible !important; }
 #tsBookRow .h-row { padding-top: 70px; margin-top: -70px; padding-bottom: 70px; margin-bottom: -70px; }
 
@@ -1141,7 +1135,6 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
   padding-bottom: 8px;
 }
 
-/* coloured top stripe that follows active bucket */
 #wgSection::before {
   content: '';
   position: absolute;
@@ -1304,7 +1297,7 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
 }
 @media (max-width: 700px) {
   .hero-cover-wrap { width: 130px; }
-  .hero-thumb      { width: 44px; }   /* was 36px */
+  .hero-thumb      { width: 44px; }  
 }
 
 .season-text { flex: 1; min-width: 0; }
@@ -1366,7 +1359,6 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
   box-shadow: 0 4px 14px rgba(0,0,0,.35);
 }
 
-/* Row wrapper needs z-index above ::after grain */
 #seasonSection .new-section-row { position: relative; z-index: 1; }
 #seasonSection .hs-header       { position: relative; z-index: 1; }
 
@@ -1480,7 +1472,7 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
   .travel-current-strip { padding: 4px 16px 0; }
 }
 /* ═══════════════════════════════════════════════════════════════
-   MOOD SECTION — paste at the BOTTOM of style.css
+   MOOD SECTION 
 ═══════════════════════════════════════════════════════════════ */
 /* ── Section wrapper ─────────────────────────────────────────── */
 .mood-rec-section {background: linear-gradient(135deg, #0f0608 0%, #1a0d12 55%, #0f0608 100%);border-radius: 0;padding: 0 0 8px;transition: background .6s ease;
@@ -1590,7 +1582,6 @@ html, body { height:100%; font-family:'Montaga',serif; background:var(--bg2); co
   .mood-pill    { padding: 6px 12px; font-size: 11px; }
   .mood-icon-pill { width: 46px; height: 46px; }
 }
-/* Fix sidebar not showing on desktop by default */
 @media (min-width: 901px) {
   .sidebar {
     transform: translateX(0) !important;

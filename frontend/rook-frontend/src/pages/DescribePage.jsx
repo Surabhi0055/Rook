@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { API_BASE, dedup, cleanImageUrl } from '../hooks/useBooks'
 import { fetchGBCover } from '../components/BookCard'
 
-/* ─── Block list — same as Home.jsx ─── */
+/* ─── Block list ─── */
 const _BLOCK = ['harry potter boxed','boxed set','box set','omnibus','complete works','volume 1','volume 2','vol 1','vol 2']
 function _clean(list) {
   const seen = new Set()
@@ -104,7 +104,7 @@ function _analyseDescription(q) {
   const t = q.toLowerCase()
 
   // Mood key detection — matches backend _MOOD_TO_GENRES keys exactly
-  let moodKey = 'hopeful' // safe default
+  let moodKey = 'hopeful' 
   if (/thrill|suspense|paranoi|nail.bit|grip|cant.put|page.turn|twist|psych/i.test(t)) moodKey = 'tense'
   else if (/dark|gritt|disturb|bleak|sinister|dread|menac|unsettl|moral.complex/i.test(t)) moodKey = 'dark'
   else if (/romance|love.story|slow.burn|enemies.to.lovers|heart.warm|tender|passion|falling.in.love|yearning/i.test(t)) moodKey = 'romantic'
