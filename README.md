@@ -1,10 +1,10 @@
 <div align="center">
 
-#  ROOK
+# ROOK
 
 ### AI-Powered Book Recommendation System
 
-**Discover your next great read — by mood, season, vibe, or feeling.**
+**Discover your next great read — by mood, season, vibe, time or feeling.**
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -239,7 +239,7 @@ BOOK_RECOMMENDER/                    ← Project Root
 | **React Router DOM v6**      | Client-side page routing                             |
 | **Custom CSS (global.css)**  | 12,000+ line design system — dark/light, animations |
 | **Google Fonts**             | Montaga + Montserrat Alternates typography           |
-| **Google Books API**         | Cover images + descriptions                         |
+| **Google Books API**         | Cover images + descriptions                          |
 | **Spotify Web API**          | Real song URLs + album art for book soundtracks      |
 | **Wikipedia REST API**       | Author profile photos                                |
 | **Google Identity Services** | Google OAuth sign-in button (GSI)                    |
@@ -248,7 +248,7 @@ BOOK_RECOMMENDER/                    ← Project Root
 
 | Technology                     | Purpose                                              |
 | ------------------------------ | ---------------------------------------------------- |
-| **FastAPI**              | Async REST API                                      |
+| **FastAPI**              | Async REST API                                       |
 | **SQLAlchemy 2.x async** | ORM — works with SQLite (dev) and PostgreSQL (prod) |
 | **Pydantic v2**          | Schema validation for all requests/responses         |
 | **python-jose**          | JWT access + refresh token generation                |
