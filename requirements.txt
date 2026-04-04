@@ -15,5 +15,13 @@ python-dotenv
 sentence-transformers
 faiss-cpu
 ollama 
-tqd
+tqdm
 aiofiles
+wikipedia
+google-auth
+google-auth-oauthlib
+requests
+httpx
+cachetools
+multipart
+python-multipart

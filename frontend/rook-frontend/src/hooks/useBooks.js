@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export const API_BASE = 'http://localhost:8000/api'
+export const API_BASE = '/api'
 
 /* ── generic fetch ───────────────────────────────────────────── */
 export async function apiFetch(url, options = {}) {
