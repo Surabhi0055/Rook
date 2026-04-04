@@ -28,23 +28,22 @@ except ImportError:
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY", "")
 _GBOOKS_URL          = "https://www.googleapis.com/books/v1/volumes"
 
-_EMBED_MODEL      = "nomic-embed-text"
-_LLM_MODEL        = os.getenv("ROOK_LLM_MODEL", "llama3.2:3b")
+_EMBED_MODEL        = "nomic-embed-text"
+_LLM_MODEL          = os.getenv("ROOK_LLM_MODEL", "llama3.2:3b")
 _LLM_MODEL_FALLBACK = "llama3.2:1b"
-_FAISS_INDEX_PATH = "../models/book_faiss.index"
-_BOOK_META_PATH   = "../models/book_meta.pkl"
+_FAISS_INDEX_PATH   = "../models/book_faiss.index"
+_BOOK_META_PATH     = "../models/book_meta.pkl"
 
 _llm_query_cache: dict = {}
-_LLM_CACHE_MAX = 200
-_SEM_W    = 0.45
-_CONT_W   = 0.25
-_COLLAB_W = 0.15
-_RATING_W = 0.15
-_RL_ALPHA            = 0.30   
+_LLM_CACHE_MAX        = 200
+_SEM_W                = 0.45
+_CONT_W               = 0.25
+_COLLAB_W             = 0.15
+_RATING_W             = 0.15
+_RL_ALPHA             = 0.30
 _FUSED_SOFT_POP_FLOOR = 20
 
-# DATA LOADING
-
+# data loading
 model      = joblib.load("../models/svd_model.pkl")
 cosine_sim = joblib.load("../models/cosine_sim.pkl")
 
@@ -81,6 +80,7 @@ if _DESC_COL:
     books.loc[books["description"].str.lower().isin(_BAD_VALUES), "description"] = ""
 else:
     books["description"] = ""
+
 if "image_url" not in books.columns:
     books["image_url"] = ""
 books["image_url"] = books["image_url"].fillna("").str.strip()
@@ -118,8 +118,7 @@ if "average_rating" not in books.columns:
 books["average_rating"] = pd.to_numeric(books["average_rating"], errors="coerce").fillna(0.0)
 books = books.reset_index(drop=True)
 
-# ── Page-count detection ──────────────────────────────────────────────────────
-# Used by reading-time recommendations (30-min / 2-hour / weekend buckets).
+# page-count detection
 _PAGE_COLS = ["num_pages", "pages", "page_count", "number_of_pages", "book_pages"]
 _PAGE_COL  = next((c for c in _PAGE_COLS if c in books.columns), None)
 if _PAGE_COL:
@@ -130,7 +129,7 @@ else:
     books["_pages"] = 0
     print("[startup] No page-count column found — reading-time recs use genre fallback")
 
-# TAG PARSING
+# tag parsing
 def _split_tags(s) -> list[str]:
     if not s or not isinstance(s, str) or not s.strip():
         return []
@@ -166,13 +165,13 @@ books["_trend_score"] = (
 _trending_order = books["_trend_score"].argsort()[::-1].values
 _MAX_RC = float(books["rating_count"].max()) if len(books) else 1.0
 
-_book_id_to_idx: dict       = {int(bid): int(idx) for idx, bid in enumerate(books["book_id"])}
-_title_to_row_idx: dict     = {str(t).strip(): int(i) for i, t in enumerate(books["title"])
-                                if isinstance(t, str) and t.strip()}
+_book_id_to_idx: dict         = {int(bid): int(idx) for idx, bid in enumerate(books["book_id"])}
+_title_to_row_idx: dict       = {str(t).strip(): int(i) for i, t in enumerate(books["title"])
+                                  if isinstance(t, str) and t.strip()}
 _title_clean_to_row_idx: dict = {str(t).strip().lower(): int(i) for i, t in enumerate(books["title"])
                                   if isinstance(t, str) and t.strip()}
 
-# KNOWN-GENRE OVERRIDES
+# known-genre overrides
 _TITLE_GENRE_OVERRIDES: dict[str, set[str]] = {
     "harry potter":           {"fantasy", "magic", "young-adult"},
     "lord of the rings":      {"fantasy", "epic-fantasy"},
@@ -217,213 +216,93 @@ def _get_effective_tags(row_idx: int) -> list[str]:
             break
     return base_tags
 
-# GENRE EXCLUSION
+# genre exclusion tables
+_DESC_EXTRA_EXCLUSIONS: dict[str, set[str]] = {
+    "summer": {"fantasy", "epic-fantasy", "high-fantasy", "young-adult", "ya","magic", "wizards", "dragons",        "children", "childrens", "kids", "middle-grade",        "classics",        "manga", "graphic-novel", "comics",        "pillar", "kingsbridge",    },
+    "romance": {"fantasy", "epic-fantasy", "high-fantasy", "magic", "wizards","children", "childrens", "kids", "middle-grade","manga", "graphic-novel","classics",},
+    "cosy": {"epic-fantasy", "high-fantasy", "fantasy", "magic","science-fiction", "sci-fi", "dystopia","horror", "dark", "gothic","children", "manga", "graphic-novel","classics",},
+}
+
+_HARD_TITLE_BLACKLIST = {"harry potter", "anne of green gables", "the pillars of the earth", "the kingsbridge series", "the great book of amber", "chronicles of amber", "the very hungry caterpillar", "the americas test kitchen", "taste of home cookbook", "america's test kitchen",  "dr seuss", "sherlock holmes",  "forever in blue", "second summer of the sisterhood",
+    "the door into summer", "a room with a view", "pride and prejudice", "the thorn birds", "nine stories", "hard eight","pablo neruda", "the poetry of pablo neruda", "twenty love poems", "the hitchhiker's guide", "ultimate hitchhikers guide",}
+
 _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
-    "romance": {
-        "fantasy", "epic-fantasy", "high-fantasy", "dark-fantasy", "urban-fantasy",
-        "magic", "wizards", "dragons", "sword-and-sorcery", "fairy-tales", "mythology",
-        "science-fiction", "sci-fi", "scifi", "space", "dystopia", "dystopian",
-        "cyberpunk", "steampunk", "aliens", "post-apocalyptic",
-        "horror", "scary", "occult",
-        "children", "childrens", "kids", "middle-grade",
-        "non-fiction", "nonfiction", "biography", "autobiography", "memoir",
-        "self-help", "business", "economics", "philosophy", "psychology",
-        "history", "politics", "science", "travel", "essays",
-        "graphic-novel", "comics", "manga", "anime", "poetry",
-    },
-    "fiction": {
-        "non-fiction", "nonfiction", "biography", "autobiography", "memoir",
-        "self-help", "business", "economics", "philosophy", "psychology",
-        "history", "politics", "science", "travel", "essays",
-        "graphic-novel", "comics", "manga", "anime", "true-story", "true-crime",
-    },
-    "fantasy": {
-        "romance-novels", "chick-lit", "contemporary-romance",
-        "biography", "autobiography", "memoir", "non-fiction", "nonfiction",
-        "self-help", "business", "manga", "anime",
-    },
+    "romance": {"fantasy", "epic-fantasy", "high-fantasy", "dark-fantasy", "urban-fantasy","magic", "wizards", "dragons", "sword-and-sorcery", "fairy-tales", "mythology","science-fiction", "sci-fi", "scifi", "space", "dystopia", "dystopian","cyberpunk", "steampunk", "aliens", "post-apocalyptic","horror", "scary", "occult","children", "childrens", "kids", "middle-grade","non-fiction", "nonfiction", "biography", "autobiography", "memoir","self-help", "business", "economics", "philosophy", "psychology",  "history", "politics", "science", "travel", "essays",  "graphic-novel", "comics", "manga", "anime", "poetry", },
+    "fiction": { "non-fiction", "nonfiction", "biography", "autobiography", "memoir","self-help", "business", "economics", "philosophy", "psychology", "history", "politics", "science", "travel", "essays","graphic-novel", "comics", "manga", "anime", "true-story", "true-crime", },
+    "fantasy": {"romance-novels", "chick-lit", "contemporary-romance", "biography", "autobiography", "memoir", "non-fiction", "nonfiction",  "self-help", "business", "manga", "anime",},
     "mystery":  {"children", "childrens", "kids", "middle-grade"},
     "thriller": {"children", "childrens", "kids", "middle-grade"},
     "horror":   {"children", "childrens", "kids", "middle-grade", "romance-novels", "chick-lit"},
     "self-help": {"fiction", "literary-fiction", "fantasy", "horror", "thriller", "romance-novels", "mystery"},
     "biography": {"fiction", "literary-fiction", "fantasy", "horror", "thriller", "romance-novels", "mystery"},
-    "summer": {
-        "horror", "scary", "occult", "dark-fantasy", "gothic",
-        "non-fiction", "nonfiction", "biography", "autobiography", "memoir",
-        "philosophy", "psychology", "economics", "essays", "epic-fantasy",
-        "high-fantasy", "science-fiction", "sci-fi",
-    },
-    "morning": {
-        "horror", "scary", "occult", "epic-fantasy", "high-fantasy",
-        "non-fiction", "nonfiction", "biography", "poetry",
-        "manga", "graphic-novel", "children", "childrens", "kids",
-    },
-    "early_morning": {
-        "horror", "scary", "fantasy", "epic-fantasy", "high-fantasy",
-        "romance-novels", "graphic-novel", "manga", "thriller",
-        "children", "childrens", "kids",
-    },
-    "afternoon": {
-        "horror", "scary", "occult", "non-fiction", "nonfiction",
-        "biography", "philosophy", "essays",
-        "epic-fantasy", "high-fantasy", "manga", "graphic-novel",
-    },
-    "late_afternoon": {
-        "horror", "scary", "occult", "graphic-novel", "manga",
-        "children", "childrens", "kids", "middle-grade",
-    },
-    "evening": {
-        "children", "childrens", "kids", "middle-grade",
-        "non-fiction", "nonfiction", "biography", "self-help",
-        "epic-fantasy", "high-fantasy",
-        "manga", "graphic-novel",
-    },
-    "night": {
-        "horror", "scary", "occult",
-        "non-fiction", "nonfiction", "biography", "self-help", "philosophy",
-        "epic-fantasy", "high-fantasy",
-        "science-fiction", "sci-fi",
-        "children", "childrens", "kids", "middle-grade",
-        "manga", "graphic-novel",
-    },
-    "late_night": {
-        "children", "childrens", "kids", "middle-grade",
-        "romance-novels", "chick-lit", "comedy",
-        "epic-fantasy", "high-fantasy",
-    },
-    "winter": {
-        "chick-lit", "contemporary-romance", "romance-novels", "comedy", "humor",
-    },
-    "long flight": {
-        "non-fiction", "nonfiction", "biography", "autobiography",
-        "philosophy", "essays", "poetry",
-    },
-    "beach": {
-        "horror", "scary", "gothic", "occult",
-        "non-fiction", "nonfiction", "philosophy", "psychology", "essays",
-        "epic-fantasy", "high-fantasy", "science-fiction",
-    },
-    "road trip": {
-        "horror", "scary", "occult", "gothic",
-        "fantasy", "epic-fantasy", "science-fiction",
-    },
-    "30 minutes": {
-        "epic-fantasy", "high-fantasy", "fantasy", "science-fiction", "sci-fi",
-        "history", "biography", "autobiography", "memoir", "non-fiction", "nonfiction",
-        "philosophy", "politics", "economics", "essays", "self-help",
-        "horror", "gothic", "occult",
-    },
-    "2 hours": {
-        "epic-fantasy", "high-fantasy", "non-fiction", "nonfiction",
-        "biography", "autobiography", "memoir", "philosophy", "economics",
-        "history", "politics", "essays",
-    },
-    "weekend": {
-        "children", "childrens", "kids", "middle-grade",
-        "poetry", "short-stories", "anthology",
-        "comedy", "humor", "humour",
-    },
-    "train": {
-        "horror", "scary",
-        "non-fiction", "nonfiction", "philosophy", "essays",
-    },
-    # ── Mood exclusions ───────────────────────────────────────────────────────
-    "hopeful": {
-        "epic-fantasy", "high-fantasy", "fantasy",
-        "horror", "scary", "occult", "dark-fantasy", "gothic",
-        "non-fiction", "nonfiction", "philosophy", "economics",
-        "science-fiction", "sci-fi", "manga", "graphic-novel",
-    },
-    "emotional": {
-        "epic-fantasy", "high-fantasy", "fantasy",
-        "comedy", "humor", "humour",
-        "science-fiction", "sci-fi",
-        "manga", "graphic-novel",
-    },
-    "adventurous": {
-        "epic-fantasy", "high-fantasy",        
-        "romance-novels", "chick-lit", "contemporary-romance",
-        "non-fiction", "nonfiction", "biography", "philosophy", "essays",
-        "manga", "graphic-novel",
-    },
-    "romantic": {
-        "epic-fantasy", "high-fantasy", "fantasy",
-        "horror", "scary", "occult",
-        "science-fiction", "sci-fi",
-        "non-fiction", "nonfiction", "biography", "philosophy", "history",
-        "manga", "graphic-novel", "children", "childrens", "kids",
-    },
-    "dark": {
-        "epic-fantasy", "high-fantasy",
-        "children", "childrens", "kids", "middle-grade",
-        "comedy", "humor", "humour", "romance-novels", "chick-lit",
-        "non-fiction", "nonfiction", "self-help",
-        "manga", "graphic-novel",
-    },
-    "cosy": {
-        "epic-fantasy", "high-fantasy", "fantasy",
-        "horror", "scary", "occult", "gothic",
-        "science-fiction", "sci-fi",
-        "non-fiction", "nonfiction", "biography", "philosophy",
-        "manga", "graphic-novel",
-    },
-    "intellectual": {
-        "epic-fantasy", "high-fantasy", "fantasy",
-        "romance-novels", "chick-lit", "comedy", "humor",
-        "manga", "graphic-novel", "children", "childrens", "kids",
-        "horror", "scary",
-    },
-    "tense": {
-        "epic-fantasy", "high-fantasy", "fantasy",
-        "children", "childrens", "kids", "middle-grade",
-        "romance-novels", "chick-lit", "comedy",
-        "non-fiction", "nonfiction", "self-help", "biography",
-        "manga", "graphic-novel",
-    },
-    "dreamy": {
-        "epic-fantasy", "high-fantasy",       
-        "non-fiction", "nonfiction", "biography", "history",
-        "science-fiction", "sci-fi", "dystopia",
-        "children", "childrens", "kids",
-        "manga", "graphic-novel",
-    },
-    "funny": {
-        "epic-fantasy", "high-fantasy", "fantasy",
-        "horror", "scary", "occult",
-        "non-fiction", "nonfiction", "biography", "philosophy",
-        "science-fiction", "sci-fi",
-        "manga", "graphic-novel",
-    },
-    "reflective": {
-        "epic-fantasy", "high-fantasy", "fantasy",
-        "science-fiction", "sci-fi",
-        "horror", "scary", "occult",
-        "comedy", "humor", "humour",
-        "manga", "graphic-novel", "children", "childrens", "kids",
-    },
-    "mysterious": {
-        "epic-fantasy", "high-fantasy", "fantasy",
-        "comedy", "humor", "humour",
-        "romance-novels", "chick-lit",
-        "non-fiction", "nonfiction", "self-help",
-        "manga", "graphic-novel", "children", "childrens", "kids",
-    },
-}
-_GENRE_TITLE_EXCLUSIONS: dict[str, list[str]] = {
-    "romance": [
-        "harry potter", "lord of the rings", "fellowship of the ring",
-        "two towers", "return of the king", "the hobbit", "tolkien",
-        "carrie", "the shining", "salem's lot", "pet sematary",
-        "fullmetal alchemist", "naruto", "one piece", "attack on titan",
-        "death note", "ender's game", "hunger games", "divergent",
-        "percy jackson", "chronicles of narnia", "game of thrones",
-        "a song of ice", "wheel of time", "mistborn", "the name of the wind",
-        "eragon", "inheritance cycle",
-    ],
+    "summer": { "horror", "scary", "occult", "dark-fantasy", "gothic", "non-fiction", "nonfiction", "biography", "autobiography", "memoir", "philosophy", "psychology", "economics", "essays", "epic-fantasy", "high-fantasy", "science-fiction", "sci-fi",},
+    "morning": {"horror", "scary", "occult", "epic-fantasy", "high-fantasy", "non-fiction", "nonfiction", "biography", "poetry", "manga", "graphic-novel", "children", "childrens", "kids",},
+    "early_morning": { "horror", "scary", "fantasy", "epic-fantasy", "high-fantasy", "romance-novels", "graphic-novel", "manga", "thriller", "children", "childrens", "kids",},
+    "afternoon": { "horror", "scary", "occult", "non-fiction", "nonfiction", "biography", "philosophy", "essays", "epic-fantasy", "high-fantasy", "manga", "graphic-novel",},
+    "late_afternoon": {"horror", "scary", "occult", "graphic-novel", "manga", "children", "childrens", "kids", "middle-grade",},
+    "evening": {  "children", "childrens", "kids", "middle-grade","non-fiction", "nonfiction", "biography", "self-help",  "epic-fantasy", "high-fantasy", "manga", "graphic-novel",},
+    "night": { "horror", "scary", "occult", "non-fiction", "nonfiction", "biography", "self-help", "philosophy","epic-fantasy", "high-fantasy", "science-fiction", "sci-fi","children", "childrens", "kids", "middle-grade","manga", "graphic-novel",},
+    "late_night": {"children", "childrens", "kids", "middle-grade", "romance-novels", "chick-lit", "comedy", "epic-fantasy", "high-fantasy",},
+    "winter": {"chick-lit", "contemporary-romance", "romance-novels", "comedy", "humor",},
+    "long flight": {"non-fiction", "nonfiction", "biography", "autobiography", "philsophy", "essays", "poetry",},
+    "beach": {"horror", "scary", "gothic", "occult","non-fiction", "nonfiction", "philosophy", "psychology", "essays",  "epic-fantasy", "high-fantasy", "science-fiction",},
+    "road trip": {"horror", "scary", "occult", "gothic", "fantasy", "epic-fantasy", "science-fiction",    },
+    "30 minutes": { "epic-fantasy", "high-fantasy", "fantasy", "science-fiction", "sci-fi","history", "biography", "autobiography", "memoir", "non-fiction", "nonfiction","philosophy", "politics", "economics", "essays", "self-help","horror", "gothic", "occult",},
+    "2 hours": { "epic-fantasy", "high-fantasy", "non-fiction", "nonfiction","biography", "autobiography", "memoir", "philosophy", "economics","history", "politics", "essays",},
+    "weekend": {"children", "childrens", "kids", "middle-grade","poetry", "short-stories", "anthology","comedy", "humor", "humour",},
+    "train": {"horror", "scary", "non-fiction", "nonfiction", "philosophy", "essays",},
+    "hopeful": { "epic-fantasy", "high-fantasy", "fantasy", "horror", "scary", "occult", "dark-fantasy", "gothic", "non-fiction", "nonfiction", "philosophy", "economics", "science-fiction", "sci-fi", "manga", "graphic-novel",},
+    "emotional": { "epic-fantasy", "high-fantasy", "fantasy", "comedy", "humor", "humour","science-fiction", "sci-fi", "manga", "graphic-novel",},
+    "adventurous": {"epic-fantasy", "high-fantasy", "romance-novels", "chick-lit", "contemporary-romance", "non-fiction", "nonfiction", "biography", "philosophy", "essays",  "manga", "graphic-novel",},
+    "romantic": {"epic-fantasy", "high-fantasy", "fantasy","horror", "scary", "occult",  "science-fiction", "sci-fi","non-fiction", "nonfiction", "biography", "philosophy", "history", "manga", "graphic-novel", "children", "childrens", "kids",},
+    "dark": { "epic-fantasy", "high-fantasy", "children", "childrens", "kids", "middle-grade", "comedy", "humor", "humour", "romance-novels", "chick-lit",  "non-fiction", "nonfiction", "self-help", "manga", "graphic-novel",},
+    "cosy": {"epic-fantasy", "high-fantasy", "fantasy","horror", "scary", "occult", "gothic","science-fiction", "sci-fi","non-fiction", "nonfiction", "biography", "philosophy", "manga", "graphic-novel",},
+    "intellectual": {"epic-fantasy", "high-fantasy", "fantasy","romance-novels", "chick-lit", "comedy", "humor", "manga", "graphic-novel", "children", "childrens", "kids", "horror", "scary",},
+    "tense": { "epic-fantasy", "high-fantasy", "fantasy","children", "childrens", "kids", "middle-grade","romance-novels", "chick-lit", "comedy", "non-fiction", "nonfiction", "self-help", "biography", "manga", "graphic-novel",},
+    "dreamy": {"epic-fantasy", "high-fantasy", "non-fiction", "nonfiction", "biography", "history","science-fiction", "sci-fi", "dystopia", "children", "childrens", "kids", "manga", "graphic-novel",},
+    "funny": {"epic-fantasy", "high-fantasy", "fantasy","horror", "scary", "occult","non-fiction", "nonfiction", "biography", "philosophy", "science-fiction", "sci-fi","manga", "graphic-novel",},
+    "reflective": { "epic-fantasy", "high-fantasy", "fantasy","science-fiction", "sci-fi","horror", "scary", "occult", "comedy", "humor", "humour","manga", "graphic-novel", "children", "childrens", "kids",},
+    "mysterious": { "epic-fantasy", "high-fantasy", "fantasy","comedy", "humor", "humour","romance-novels", "chick-lit", "non-fiction", "nonfiction", "self-help","manga", "graphic-novel", "children", "childrens", "kids", },
 }
 
+_GENRE_TITLE_EXCLUSIONS: dict[str, list[str]] = {
+    "romance": ["harry potter", "lord of the rings", "fellowship of the ring", "two towers", "return of the king", "the hobbit", "tolkien", "carrie", "the shining", "salem's lot", "pet sematary","fullmetal alchemist", "naruto", "one piece", "attack on titan",  "death note", "ender's game", "hunger games", "divergent","percy jackson", "chronicles of narnia", "game of thrones", "a song of ice", "wheel of time", "mistborn", "the name of the wind",  "eragon", "inheritance cycle",  ],}
+
+_DESC_INTENT_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"\bsad\b|\btragic\b|\btragedy\b|\bcry\b|\bcries\b|\btears\b|"r"\bheartbreak\b|\bheartbreaking\b|\bheartwrenching\b|\bheart.wrench|" r"\bgrief\b|\bmourning\b|\bloss\b|\bdeath\b|\bdying\b|\bbereave|" r"sad ending|tragic ending|sad conclusion|emotional ending|"r"makes you cry|will make you cry|book that makes|bittersweet", re.I), "emotional"),
+    (re.compile( r"rom[\s-]?com|romantic comedy|chick.?lit|beach read|" r"enemies.to.lovers|fake.?dating|friends.to.lovers|" r"summer romance|holiday romance|feel.?good romance|light.?heart", re.I), "summer"),
+    (re.compile(r"\bpink\b|\bpastel\b|\bspringy\b|\bcute\b|\bfresh\b|\bfluffy\b|" r"spring vibes?|pink vibes?|cottagecore|soft aesthetic|" r"wholesome.*romance|sweet.*romance|light.*romance|" r"feel.?good|uplifting.*romance|charming.*romance", re.I), "hopeful"),
+    (re.compile(r"\bsummer\b|\bbeach\b|\bholiday\b|\bsun[ny]?\b|\bwarm\b|\bvacation\b|\btropic", re.I ), "summer"),
+    (re.compile(r"\bromance\b|\bromantic\b|\blove story\b|\bslow.?burn\b|\bpassionate love\b|" r"love.*book|book.*love",re.I), "romance"),
+    (re.compile( r"\bthriller\b|\bsuspense\b|\bpsychological\b|\bmurder\b|\bdetective\b|"r"\bnoir\b|\bwhodunit\b|\bcrime fiction\b|\bserial killer\b|\bcriminal\b", re.I), "tense"),
+    (re.compile(r"\bfantasy\b|\bmagic\b|\bdragon\b|\bwizard\b|\bfae\b|\bepic quest\b|\bhigh fantasy\b",re.I), "fiction"),
+    (re.compile(r"\bcozy\b|\bcosy\b|\bcomforting\b|\bwholesome\b|\bcharming\b|\bvillage\b|"r"\bfeel.?good\b|\bcottage\b|\bwarm.*hug\b", re.I ), "cosy"),
+    (re.compile( r"\bdark\b|\bgritty\b|\bsinister\b|\bbleak\b|\bunsettling\b|\bdisturbing\b|"r"\bdystoп\b|\bdystopia\b|\bpost.?apocal",re.I ), "dark"),
+    (re.compile(r"\bfunny\b|\bhumor\b|\bhumour\b|\bcomic\b|\babsurd\b|\bwitty\b|\blaugh\b|"r"\bsatiric\b|\bsatire\b|\bhilarious\b", re.I ), "funny"),
+    (re.compile( r"\bhealing\b|\brecovery\b|\bovercoming\b|\bsurviving\b|\bresilience\b|"r"\bgrowing through\b|\bfinding hope\b",re.I), "hopeful"),
+    (re.compile( r"\bhopefu|\buplifting\b|\bredemptive\b|\binspiring\b|\boptimist",re.I ), "hopeful"),
+    (re.compile( r"\bhistorical\b|\bancient\b|\bvictorian\b|\bmedieval\b|\bworld war\b|" r"\brome\b|\btutor\b|\bregency\b|\bperiod drama\b", re.I), "reflective"),
+    (re.compile( r"\bself.?help\b|\bpersonal development\b|\bhabits\b|\bmindset\b|\bproductivity\b",re.I ), "intellectual"),
+    (re.compile( r"\bbusiness\b|\bmarketing\b|\bsales\b|\bstartup\b|\bentrepreneur\b|\bleadership\b", re.I), "intellectual"),
+    (re.compile( r"\bsports?\b|\bteam spirit\b|\bathlete\b|\bchampionship\b|\bcoach\b|\bcompetition\b",re.I), "adventurous"),
+    (re.compile( r"\beducation\b|\blearning\b|\bteaching\b|\bpedagogy\b|\bschool\b|\bacademic\b", re.I ), "intellectual"),
+    (re.compile(r"\bnature\b|\bastronomy\b|\bplanet\b|\bstar\b|\bcosmos\b|\bgeograph\b|\bwildlife\b|\becolog",re.I), "intellectual"),
+    (re.compile(r"\bscience fiction\b|\bsci.?fi\b|\bdystop\b|\bfuturistic\b|\bspace\b|\brobots?\b|\balien\b", re.I), "adventurous"),
+    (re.compile(r"\bcoming.of.age\b|\byoung adult\b|\bya novel\b|\bteen\b|\bfirst love\b|\bgrowing up\b",re.I), "hopeful"),
+    (re.compile(r"\bdark academia\b|\bcampus\b|\bboarding school\b|\bgothic literary\b|\blyrical prose\b", re.I), "intellectual"),(re.compile( r"\bmysterious\b|\benigmatic\b|\bunreliable narrator\b|\bpuzzle\b|"r"\bhidden truth\b|\bcozy mystery\b|\bcosy mystery\b",re.I), "mysterious"),(re.compile(r"\bdream\b|\blyrical\b|\bpoetic\b|\bsurreal\b|\bmagical realism\b|\betherea",re.I), "dreamy"),]
+
+def _detect_description_intent(description: str) -> str | None:
+    for pattern, intent_key in _DESC_INTENT_PATTERNS:
+        if pattern.search(description):
+            return intent_key
+    return None
+
+def _is_title_blacklisted(title: str) -> bool:
+    t = title.lower().strip()
+    return any(frag in t for frag in _HARD_TITLE_BLACKLIST)
+
 def _is_excluded_from_genre(row_idx: int, genre_key: str) -> bool:
-    title_lc   = str(books.iloc[row_idx].get("title_clean", ""))
+    title_lc  = str(books.iloc[row_idx].get("title_clean", ""))
     for fragment in _GENRE_TITLE_EXCLUSIONS.get(genre_key, []):
         if fragment in title_lc:
             return True
@@ -434,13 +313,26 @@ def _is_excluded_from_genre(row_idx: int, genre_key: str) -> bool:
         tag_norm = tag.replace(" ", "-")
         if tag_norm in excl_tags or tag in excl_tags:
             return True
-        # preventing "fiction" inside "science-fiction" from falsely matching.
         for excl in excl_tags:
             if len(excl) >= 6 and excl == tag_norm:
                 return True
     return False
 
-# CONTENT MATRIX
+def _passes_description_filter(row_idx: int, intent_key: str | None) -> bool:
+    title = str(books.iloc[row_idx].get("title_clean", ""))
+    if _is_title_blacklisted(title):
+        return False
+    if intent_key and _is_excluded_from_genre(row_idx, intent_key):
+        return False
+    if intent_key and intent_key in _DESC_EXTRA_EXCLUSIONS:
+        extra_excl = _DESC_EXTRA_EXCLUSIONS[intent_key]
+        for tag in _get_effective_tags(row_idx):
+            tag_norm = tag.replace(" ", "-").lower()
+            if tag_norm in extra_excl or tag in extra_excl:
+                return False
+    return True
+
+# content matrix (TF-IDF + SVD)
 def _make_soup(row: pd.Series) -> str:
     desc   = " ".join([str(row.get("description", "") or "")] * 2)
     genre  = " ".join([str(row.get("genre_clean",  "") or "")] * 3)
@@ -471,7 +363,7 @@ except AttributeError:
     _USE_BATCH_SVD = False
     print("[startup] SVD batch mode: OFF")
 
-# SEMANTIC LAYER
+# semantic layer (FAISS)
 _faiss_index: faiss.Index | None = None
 _book_meta:   pd.DataFrame | None = None
 _sem_ready:   bool = False
@@ -489,6 +381,7 @@ def _load_semantic_layer() -> None:
         print(f"[semantic] Failed: {e}")
 
 _load_semantic_layer()
+
 def _embed_query(text: str) -> np.ndarray:
     dim = _faiss_index.d if _faiss_index else 768
     try:
@@ -502,9 +395,6 @@ def _embed_query(text: str) -> np.ndarray:
         return np.zeros((1, dim), dtype=np.float32)
 
 def _semantic_search_raw(query_text: str, pool: int = 150, offset: int = 0) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Filters out FAISS padding (-1 indices) before slicing by offset.
-    """
     if not _sem_ready or _faiss_index is None:
         return np.array([]), np.array([])
     vec = _embed_query(query_text)
@@ -514,113 +404,43 @@ def _semantic_search_raw(query_text: str, pool: int = 150, offset: int = 0) -> t
     raw_scores, raw_indices = _faiss_index.search(vec, fetch_n)
     scores  = raw_scores[0]
     indices = raw_indices[0]
-    # Remove FAISS padding (-1) before slicing
     valid_mask = indices >= 0
     scores  = scores[valid_mask]
     indices = indices[valid_mask]
     if offset > 0 and len(indices) > offset:
         scores  = scores[offset:]
         indices = indices[offset:]
-    elif offset > 0:
-        # Not enough results to honour offset — return what we have
-        pass
     return scores[:pool], indices[:pool]
 
-# GENRE ALIASES + INDEX
+# genre aliases and index
 _GENRE_ALIASES: dict[str, list[str]] = {
-    "romance": [
-        "romance","romance-novels","romantic","love","love-story",
-        "contemporary-romance","historical-romance","chick-lit",
-        "romantic-suspense","paranormal-romance","regency-romance",
-        "romance-contemporary","romance-historical","romance-paranormal",
-        "new-adult-romance","adult-romance","romances","romantic-fiction",
-        "clean-romance","sweet-romance","inspirational-romance",
-        "christian-romance","sports-romance","billionaire-romance",
-        "second-chance-romance","enemies-to-lovers","slow-burn",
-        "slow-burn-romance","friends-to-lovers","forbidden-romance",
-        "small-town-romance","office-romance","fake-dating",
-        "marriage-of-convenience","arranged-marriage",
-    ],
-    "fantasy": [
-        "fantasy","epic-fantasy","high-fantasy","dark-fantasy","urban-fantasy",
-        "magic","sword-sorcery","fairy-tales","mythology","wizards","dragons",
-    ],
-    "mystery": [
-        "mystery","mysteries","detective","cozy-mystery","whodunit","noir","crime-fiction",
-    ],
-    "thriller": [
-        "thriller","suspense","psychological-thriller","spy","espionage",
-        "legal-thriller","political-thriller",
-    ],
-    "horror": [
-        "horror","gothic","supernatural","dark","scary","occult",
-    ],
-    "science fiction": [
-        "science-fiction","sci-fi","scifi","space","dystopia","dystopian",
-        "cyberpunk","steampunk","aliens","post-apocalyptic","science fiction",
-    ],
-    "sci-fi": [
-        "science-fiction","sci-fi","scifi","space","dystopia","dystopian",
-        "cyberpunk","steampunk","aliens","post-apocalyptic",
-    ],
-    "adventure": [
-        "adventure","action","action-adventure","survival","quest",
-    ],
-    "classics": [
-        "classics","classic","classic-literature","literature",
-    ],
-    "literary": [
-        "literary-fiction","literary","contemporary-fiction","fiction","general-fiction",
-    ],
-    "fiction": [
-        "fiction","literary-fiction","contemporary-fiction","general-fiction","literary",
-    ],
-    "history": [
-        "history","historical","historical-fiction","historical-novel",
-    ],
-    "biography": [
-        "biography","autobiography","memoir","memoirs","true-story",
-    ],
-    "self-help": [
-        "self-help","personal-development","productivity","motivation",
-        "self-improvement","nonfiction","non-fiction","selfhelp",
-    ],
-    "comedy": [
-        "comedy","humor","humour","funny","satire","comic-fiction",
-    ],
-    "young-adult": [
-        "young-adult","ya","teen","coming-of-age",
-    ],
-    "philosophy": [
-        "philosophy","ethics","essays","intellectual",
-    ],
-    "poetry": [
-        "poetry","poems","verse",
-    ],
-    "paranormal": [
-        "paranormal","vampires","werewolves","witches","supernatural",
-    ],
-    "children": [
-        "children","childrens","kids","middle-grade",
-    ],
-    "crime": [
-        "crime","detective","true-crime","murder","police","noir",
-    ],
-    "short-stories": [
-        "short-stories","anthology","short-story","collection",
-    ],
-    "psychology": [
-        "psychology","mental-health","mind",
-    ],
-    "non-fiction": [
-        "non-fiction","nonfiction","true-crime","essays",
-    ],
-    "graphic novel": [
-        "graphic-novel","comics","manga","graphic novel",
-    ],
-}
+    "romance": ["romance","romance-novels","romantic","love","love-story","contemporary-romance","historical-romance","chick-lit", "romantic-suspense","paranormal-romance","regency-romance","romance-contemporary","romance-historical","romance-paranormal", "new-adult-romance","adult-romance","romances","romantic-fiction","clean-romance","sweet-romance","inspirational-romance","christian-romance","sports-romance","billionaire-romance",
+        "second-chance-romance","enemies-to-lovers","slow-burn","slow-burn-romance","friends-to-lovers","forbidden-romance", "small-town-romance","office-romance","fake-dating","marriage-of-convenience","arranged-marriage",],
+    "fantasy": ["fantasy","epic-fantasy","high-fantasy","dark-fantasy","urban-fantasy", "magic","sword-sorcery","fairy-tales","mythology","wizards","dragons",],
+    "mystery": ["mystery","mysteries","detective","cozy-mystery","whodunit","noir","crime-fiction",],
+    "thriller": [        "thriller","suspense","psychological-thriller","spy","espionage",        "legal-thriller","political-thriller",    ],
+    "horror": [        "horror","gothic","supernatural","dark","scary","occult",    ],
+    "science fiction": [        "science-fiction","sci-fi","scifi","space","dystopia","dystopian",        "cyberpunk","steampunk","aliens","post-apocalyptic","science fiction",    ],
+    "sci-fi": [        "science-fiction","sci-fi","scifi","space","dystopia","dystopian","cyberpunk","steampunk","aliens","post-apocalyptic",    ],
+    "adventure": [        "adventure","action","action-adventure","survival","quest",],
+    "classics": ["classics","classic","classic-literature","literature",   ],
+    "literary": [        "literary-fiction","literary","contemporary-fiction","fiction","general-fiction",    ],
+    "fiction": [        "fiction","literary-fiction","contemporary-fiction","general-fiction","literary",    ],
+    "history": [        "history","historical","historical-fiction","historical-novel",    ],
+    "biography": [        "biography","autobiography","memoir","memoirs","true-story",    ],
+    "self-help": [        "self-help","personal-development","productivity","motivation",        "self-improvement","nonfiction","non-fiction","selfhelp",    ],
+    "comedy": [        "comedy","humor","humour","funny","satire","comic-fiction",    ],
+    "young-adult": [        "young-adult","ya","teen","coming-of-age",    ],
+    "philosophy": [        "philosophy","ethics","essays","intellectual",    ],
+    "poetry": [        "poetry","poems","verse",    ],
+    "paranormal": [        "paranormal","vampires","werewolves","witches","supernatural",    ],
+    "children": [        "children","childrens","kids","middle-grade",    ],
+    "crime": [        "crime","detective","true-crime","murder","police","noir",    ],
+    "short-stories": [        "short-stories","anthology","short-story","collection",    ],
+    "psychology": [        "psychology","mental-health","mind",    ],
+    "non-fiction": [        "non-fiction","nonfiction","true-crime","essays",    ],
+    "graphic novel": [        "graphic-novel","comics","manga","graphic novel",    ],}
 
-# Pre-built exact-match lookup: alias → canonical genre
 _TAG_TO_GENRE: dict[str, str] = {}
 for _g, _aliases in _GENRE_ALIASES.items():
     for _alias in _aliases:
@@ -629,9 +449,6 @@ for _g, _aliases in _GENRE_ALIASES.items():
 _GENRE_INDEX: dict[str, np.ndarray] = {}
 
 def _build_genre_index() -> None:
-    """
-    Uses pre-built _TAG_TO_GENRE dict for O(1) lookup per tag.
-    """
     global _GENRE_INDEX
     print("[genre_index] Building …")
     genre_to_rows: dict[str, list[int]] = {g: [] for g in _GENRE_ALIASES}
@@ -652,25 +469,12 @@ def _build_genre_index() -> None:
 
 _build_genre_index()
 
-# MOOD MAPPINGS
+# mood mappings
 _MOOD_TO_GENRES: dict[str, list[str]] = {
-    "summer":              ["adventure","comedy","young-adult","romance"],
-    "spring":              ["young-adult","literary","romance","comedy"],
-    "rainy":               ["horror","paranormal","thriller","mystery"],
-    "autumn":              ["classics","history","crime","mystery"],
-    "fall":                ["classics","history","crime","mystery"],
-    "winter":              ["fantasy","sci-fi","horror","literary"],
+    "summer":              ["adventure","comedy","young-adult","romance"], "spring":              ["young-adult","literary","romance","comedy"],"rainy":               ["horror","paranormal","thriller","mystery"],"autumn":              ["classics","history","crime","mystery"], "fall":                ["classics","history","crime","mystery"], "winter":              ["fantasy","sci-fi","horror","literary"],
     "early_morning":       ["philosophy","poetry","self-help","biography"],
-    "morning":             ["crime","thriller","mystery","fiction"],
-    "afternoon":           ["comedy","young-adult","adventure","romance"],
-    "late_afternoon":      ["history","literary","classics","fiction"],
-    "evening":             ["thriller","mystery","horror","crime"],
-    "night":               ["paranormal","romance","literary","classics"],
-    "late_night":          ["horror","thriller","sci-fi","crime"],
-    "long flight":         ["fantasy","sci-fi","adventure","thriller"],
-    "train":               ["classics","history","mystery","romance"],
-    "beach":               ["romance","comedy","young-adult","adventure"],
-    "road trip":           ["biography","self-help","adventure","literary"],
+    "morning":             ["crime","thriller","mystery","fiction"],"afternoon":           ["comedy","young-adult","adventure","romance"], "late_afternoon":      ["history","literary","classics","fiction"], "evening":             ["thriller","mystery","horror","crime"], "night":               ["paranormal","romance","literary","classics"], "late_night":          ["horror","thriller","sci-fi","crime"],
+    "long flight":         ["fantasy","sci-fi","adventure","thriller"],"train":               ["classics","history","mystery","romance"], "beach":               ["romance","comedy","young-adult","adventure"], "road trip":           ["biography","self-help","adventure","literary"],
     "30 minutes":          ["comedy","romance","mystery","young-adult","fiction"],
     "2 hours":             ["thriller","mystery","romance","fiction","young-adult"],
     "weekend":             ["fantasy","literary","history","classics","sci-fi"],
@@ -728,9 +532,8 @@ def _match_mood_key(query: str) -> str | None:
             if re.search(signal, q): return key
     return None
 
-# GENRE MOOD SEARCH
+# genre mood search
 def _stable_rng_seed(text: str) -> int:
-    """Reproducible seed via MD5."""
     return int(hashlib.md5(text.encode(), usedforsecurity=False).hexdigest(), 16) % (2**31)
 
 def _genre_mood_search(
@@ -777,11 +580,8 @@ def _genre_mood_search(
     )
     sorted_idx = all_candidates[np.argsort(score)[::-1]]
     if offset > 0:
-        if len(sorted_idx) > offset + pool:
+        if len(sorted_idx) > offset:
             sorted_idx = sorted_idx[offset:]
-        elif len(sorted_idx) > offset:
-            sorted_idx = sorted_idx[offset:]
-        # else: not enough results — return from beginning, different shuffle covers diversity
     return list(sorted_idx[:pool])
 
 def _tfidf_mood_search(query: str, pool: int = 200) -> list[int]:
@@ -795,8 +595,7 @@ def _tfidf_mood_search(query: str, pool: int = 200) -> list[int]:
     except Exception as e:
         print(f"[tfidf_mood_search] {e}"); return []
 
-# LLM EXPANSION — scene-aware query generation
-
+# LLM expansion
 _SCENE_PROMPTS: dict[str, str] = {
     "hopeful":      "The reader wants a book that leaves them feeling lifted and warm. They need stories about overcoming, healing, second chances, or quiet triumphs. The writing should feel like sunlight through a window.",
     "emotional":    "The reader wants to feel something deeply — grief, longing, love, loss. They want prose that aches, characters whose inner lives feel utterly real, and an ending that stays with them long after the last page.",
@@ -827,6 +626,7 @@ _SCENE_PROMPTS: dict[str, str] = {
     "night":        "The reader is in bed, the room is dark. They want something tender and soothing — a gentle romance, a quiet literary novel, something that eases them toward sleep rather than keeping them up.",
     "late_night":   "It's past midnight and the reader can't sleep. They want something dark, obsessive, unsettling — a book that matches the hour. The kind of story that feels different read in darkness.",
 }
+
 _SYSTEM_PROMPT = (
     "You are a book recommendation engine. Your job is to generate a rich, "
     "sensory description of the IDEAL BOOK for a reader in a specific scene. "
@@ -837,7 +637,6 @@ _SYSTEM_PROMPT = (
 )
 
 def _make_scene_prompt(mood: str, context: dict) -> str:
-    """Build a scene-grounded prompt for the LLM."""
     mood_lower = mood.lower().strip()
     scene = ""
     for ctx_key in ("time_of_day", "travel", "season", "reading_time"):
@@ -869,10 +668,6 @@ def _llm_cache_key(mood: str, context: dict) -> str:
     return f"{mood.lower().strip()}::{relevant}"
 
 def _expand_mood(mood: str, context: dict) -> str:
-    """
-    Scene-aware LLM query expansion with cache.
-    Falls back to mood string if Ollama unavailable.
-    """
     cache_key = _llm_cache_key(mood, context)
     if cache_key in _llm_query_cache:
         print(f"[expand_mood] cache hit: {cache_key[:60]}")
@@ -906,8 +701,7 @@ def _expand_mood(mood: str, context: dict) -> str:
             continue
     return mood
 
-# GOOGLE BOOKS ENRICHMENT
-# Only called when enrich=True and fields are genuinely missing.
+# Google Books enrichment
 @lru_cache(maxsize=4096)
 def _google_enrich(title: str, author: str) -> tuple:
     if not GOOGLE_BOOKS_API_KEY:
@@ -935,39 +729,10 @@ def _google_enrich(title: str, author: str) -> tuple:
         print(f"[google_enrich] Exception for '{title}': {e}")
         return ("", "")
 
-# DISPLAY HELPERS
-_GENRE_MAP = {
-    "fiction":"Fiction","fantasy":"Fantasy","mystery":"Mystery","romance":"Romance",
-    "thriller":"Thriller","horror":"Horror","science-fiction":"Sci-Fi","sci-fi":"Sci-Fi",
-    "scifi":"Sci-Fi","biography":"Biography","biographies":"Biography","history":"History",
-    "historical":"Historical Fiction","historical-fiction":"Historical Fiction",
-    "classics":"Classics","classic":"Classics","literature":"Literature",
-    "literary-fiction":"Literary Fiction","self-help":"Self-Help","selfhelp":"Self-Help",
-    "comedy":"Comedy","humor":"Humor","humour":"Humor","adventure":"Adventure","action":"Adventure",
-    "non-fiction":"Non-Fiction","nonfiction":"Non-Fiction","young-adult":"Young Adult","ya":"Young Adult",
-    "children":"Children","childrens":"Children","graphic-novel":"Graphic Novel","comics":"Graphic Novel",
-    "crime":"Crime","detective":"Crime","poetry":"Poetry","drama":"Drama","psychology":"Psychology",
-    "philosophy":"Philosophy","science":"Science","travel":"Travel","paranormal":"Paranormal",
-    "dystopia":"Dystopia","magic":"Fantasy","wizards":"Fantasy","vampires":"Paranormal",
-    "werewolves":"Paranormal","war":"War","military":"War","memoir":"Memoir",
-    "autobiography":"Memoir","short-stories":"Short Stories","anthology":"Anthology",
-    "spirituality":"Spirituality","religion":"Religion","business":"Business",
-    "economics":"Economics","politics":"Politics","essay":"Essays",
-    "contemporary-romance":"Romance","historical-romance":"Romance",
-    "paranormal-romance":"Romance","romantic-suspense":"Romance",
-    "chick-lit":"Romance","regency-romance":"Romance","new-adult":"Romance","love-story":"Romance",
-}
+# display helpers
+_GENRE_MAP = {"fiction":"Fiction","fantasy":"Fantasy","mystery":"Mystery","romance":"Romance","thriller":"Thriller","horror":"Horror","science-fiction":"Sci-Fi","sci-fi":"Sci-Fi", "scifi":"Sci-Fi","biography":"Biography","biographies":"Biography","history":"History", "historical":"Historical Fiction","historical-fiction":"Historical Fiction","classics":"Classics","classic":"Classics","literature":"Literature", "literary-fiction":"Literary Fiction","self-help":"Self-Help","selfhelp":"Self-Help", "comedy":"Comedy","humor":"Humor","humour":"Humor","adventure":"Adventure","action":"Adventure", "non-fiction":"Non-Fiction","nonfiction":"Non-Fiction","young-adult":"Young Adult","ya":"Young Adult", "children":"Children","childrens":"Children","graphic-novel":"Graphic Novel","comics":"Graphic Novel", "crime":"Crime","detective":"Crime","poetry":"Poetry","drama":"Drama","psychology":"Psychology", "philosophy":"Philosophy","science":"Science","travel":"Travel","paranormal":"Paranormal","dystopia":"Dystopia","magic":"Fantasy","wizards":"Fantasy","vampires":"Paranormal","werewolves":"Paranormal","war":"War","military":"War","memoir":"Memoir","autobiography":"Memoir","short-stories":"Short Stories","anthology":"Anthology","spirituality":"Spirituality","religion":"Religion","business":"Business","economics":"Economics","politics":"Politics","essay":"Essays","contemporary-romance":"Romance","historical-romance":"Romance","paranormal-romance":"Romance","romantic-suspense":"Romance",    "chick-lit":"Romance","regency-romance":"Romance","new-adult":"Romance","love-story":"Romance",}
 
-_SKIP_TAGS = {
-    "favorites","favourite","owned","books-i-own","to-read","toread","read",
-    "currently-reading","re-read","school","library","my-books","bookshelf",
-    "default","kindle","ebook","e-book","audiobook","audio","did-not-finish",
-    "dnf","maybe","wishlist","borrowed","gave-away","loaned","lost","abandoned",
-    "unfinished","recommended","recommendation","suggestions","challenge",
-    "book-club","bookclub","series","novel","novels","book","books",
-    "english","american","british","classic-literature","i-own","iown",
-    "have","want","buy","bought",
-}
+_SKIP_TAGS = { "favorites","favourite","owned","books-i-own","to-read","toread","read","currently-reading","re-read","school","library","my-books","bookshelf",    "default","kindle","ebook","e-book","audiobook","audio","did-not-finish","dnf","maybe","wishlist","borrowed","gave-away","loaned","lost","abandoned",    "unfinished","recommended","recommendation","suggestions","challenge","book-club","bookclub","series","novel","novels","book","books",    "english","american","british","classic-literature","i-own","iown","have","want","buy","bought"}
 
 def _clean_genre(genre_str: str) -> str:
     if not genre_str or not genre_str.strip(): return ""
@@ -992,7 +757,7 @@ def _clean_genre(genre_str: str) -> str:
         if len(clean) >= 3: break
     return ", ".join(clean)
 
-# SERIALISATION
+# serialisation
 def _to_dict(row: pd.Series, predicted_rating=None, enrich: bool = False) -> dict:
     title   = str(row.get("title",      "") or "").strip()
     authors = str(row.get("authors",    "") or "").strip()
@@ -1026,20 +791,21 @@ def _to_dict(row: pd.Series, predicted_rating=None, enrich: bool = False) -> dic
 
     book_id_val = row.get("book_id", None)
     try:
-        n = float(str(book_id_val))  # handles "3.0" string cases
+        n = float(str(book_id_val))
         book_id_val = int(n) if (n > 0 and n == int(n)) else None
     except (ValueError, TypeError):
         book_id_val = None
+
     d = {
-        "book_id":       book_id_val,  
-        "title":         title,
-        "authors":       authors,
-        "average_rating":float(row.get("average_rating", 0.0) or 0.0),
-        "rating_count":  int(  row.get("rating_count",   0)   or 0),
-        "image_url":     image,
-        "description":   description,
-        "genre":         _clean_genre(genre),
-        "published_date":pub_year,
+        "book_id":        book_id_val,
+        "title":          title,
+        "authors":        authors,
+        "average_rating": float(row.get("average_rating", 0.0) or 0.0),
+        "rating_count":   int(  row.get("rating_count",   0)   or 0),
+        "image_url":      image,
+        "description":    description,
+        "genre":          _clean_genre(genre),
+        "published_date": pub_year,
     }
     if predicted_rating is not None:
         d["predicted_rating"] = round(float(predicted_rating), 2)
@@ -1069,7 +835,7 @@ def _rows_to_dicts_fast(row_indices: list[int],
         for i in row_indices if 0 <= i < len(books)
     ]
 
-# INDEX HELPERS
+# index helpers
 def _title_to_idx(title: str) -> int | None:
     if not isinstance(title, str) or not title.strip(): return None
     idx = _title_to_row_idx.get(title.strip())
@@ -1090,7 +856,6 @@ def _titles_to_indices(titles: list) -> list[int]:
     return out
 
 def _apply_rl_rerank(scores: np.ndarray, seed_indices: list) -> np.ndarray:
-
     if not seed_indices: return scores
     boost = cosine_similarity(_latent_mat, _latent_mat[seed_indices]).max(axis=1)
     combined = scores + _RL_ALPHA * boost
@@ -1099,7 +864,7 @@ def _apply_rl_rerank(scores: np.ndarray, seed_indices: list) -> np.ndarray:
         combined = combined / max_val
     return combined
 
-# COLLABORATIVE SCORING
+# collaborative scoring
 def _compute_collab_scores(user_id: int) -> dict[str, float]:
     if not _USE_BATCH_SVD: return {}
     try:
@@ -1128,7 +893,7 @@ else:
     def _get_collab_scores_for_user(user_id: int) -> dict[str, float]:
         return _compute_collab_scores(user_id)
 
-# FUSED RECOMMENDATION
+# fused recommendation
 def recommend_fused(
     semantic_query:    str,
     mood_context:      dict       | None = None,
@@ -1148,7 +913,7 @@ def recommend_fused(
                if isinstance(t, str) and t.strip()}
     pool = min(300, len(books))
 
-    # ── Semantic (FAISS) scores ──────────────────────────────────────────────
+    # semantic (FAISS) scores
     sem_idx_scores: dict[int, float] = {}
     if _sem_ready and semantic_query:
         raw_scores, raw_indices = _semantic_search_raw(semantic_query, pool, offset)
@@ -1163,7 +928,7 @@ def recommend_fused(
                     if row_idx is not None:
                         sem_idx_scores[row_idx] = float((score - s_min) / s_range)
 
-    # ── Genre / mood scores ──────────────────────────────────────────────────
+    # genre / mood scores
     tfidf_idx_scores: dict[int, float] = {}
     genre_idx_scores: dict[int, float] = {}
     if (not sem_idx_scores or force_genre_blend) and semantic_query:
@@ -1199,7 +964,7 @@ def recommend_fused(
         for rank, idx in enumerate(genre_candidates):
             genre_idx_scores[idx] = 1.0 - (rank / max_rank)
 
-    # ── Content (seed-title) scores ──────────────────────────────────────────
+    # content (seed-title) scores
     seed_idx_scores: dict[int, float] = {}
     if seed_titles:
         clean_seeds  = [t for t in seed_titles if isinstance(t, str) and t.strip()]
@@ -1212,7 +977,7 @@ def recommend_fused(
             for i, s in enumerate(max_sims):
                 if s > 0: seed_idx_scores[i] = float(s) / cont_max
 
-    # ── Collaborative scores ─────────────────────────────────────────────────
+    # collaborative scores
     collab_scores = _get_collab_scores_for_user(user_id) if user_id else {}
     collab_idx_scores: dict[int, float] = {}
     for title, score in collab_scores.items():
@@ -1225,13 +990,6 @@ def recommend_fused(
     )
     if not candidate_indices: return trending_books(top_n)
 
-    if genre_filter:
-        candidate_indices = {
-            i for i in candidate_indices if not _is_excluded_from_genre(i, genre_filter)
-        }
-    if not candidate_indices: return trending_books(top_n)
-
-    # Without blend, genre gets 30 %, sem gets 70 % of the sem_w budget.
     if force_genre_blend and genre_idx_scores:
         eff_sem_w   = sem_w * 0.40
         eff_genre_w = sem_w * 0.60
@@ -1248,6 +1006,9 @@ def recommend_fused(
         title = books.iloc[idx]["title"]
         if not isinstance(title, str) or not title.strip(): continue
         if title.lower().strip() in exclude: continue
+        title_lc = str(books.iloc[idx].get("title_clean", ""))
+        if _is_title_blacklisted(title_lc): continue
+        if genre_filter and _is_excluded_from_genre(idx, genre_filter): continue
         sem_n   = sem_idx_scores.get(idx, 0.0)
         genre_n = genre_idx_scores.get(idx, tfidf_idx_scores.get(idx, 0.0))
         cont_n  = seed_idx_scores.get(idx, 0.0)
@@ -1268,7 +1029,7 @@ def recommend_fused(
         reranked = [i for i, _ in fused[:top_n]]
     return _rows_to_dicts_fast(reranked)
 
-# MOOD QUERY MAP + SEMANTIC QUERY BUILDER
+# mood query map and semantic query builder
 _MOOD_QUERY_MAP: dict[str, str] = {
     "summer":        "beach holiday adventure sun romance light-hearted escapism warm fast-paced",
     "spring":        "new beginnings hope renewal growth optimistic fresh character",
@@ -1287,26 +1048,11 @@ _MOOD_QUERY_MAP: dict[str, str] = {
     "train":         "mystery romance atmospheric medium-length satisfying",
     "beach":         "romance comedy light holiday sun beach easy fun",
     "road trip":     "biography memoir adventure self-discovery motivating",
-    "30 minutes":    (
-        "quick short fast read compact story under 200 pages novella "
-        "light fun breezy comedic slice-of-life short fiction easy quick bite"
-    ),
-    "2 hours":       (
-        "gripping medium-length novel under 300 pages fast-paced page-turner "
-        "thriller mystery romance satisfying complete single-sitting read"
-    ),
-    "weekend":       (
-        "long immersive epic saga multi-generational sprawling world-building "
-        "fantasy classics literary masterpiece weekend read rich detailed"
-    ),
-    "adventurous":   (
-        "high-stakes action-packed daring bold fast-paced journey survival "
-        "discovery risk courage exciting page-turner adrenaline"
-    ),
-    "cosy":          (
-        "warm safe gentle comforting quiet village community charming "
-        "fireside cozy small-town feel-good heartwarming soft"
-    ),
+    "30 minutes":    ("quick short fast read compact story under 200 pages novella ""light fun breezy comedic slice-of-life short fiction easy quick bite"),
+    "2 hours":       ("gripping medium-length novel under 300 pages fast-paced page-turner " "thriller mystery romance satisfying complete single-sitting read"),
+    "weekend":       ( "long immersive epic saga multi-generational sprawling world-building " "fantasy classics literary masterpiece weekend read rich detailed"),
+    "adventurous":   ( "high-stakes action-packed daring bold fast-paced journey survival ""discovery risk courage exciting page-turner adrenaline" ),
+    "cosy":          ( "warm safe gentle comforting quiet village community charming "  "fireside cozy small-town feel-good heartwarming soft" ),
     "romantic": (
         "sweeping love story slow burn enemies to lovers second chance romance "
         "tender passionate heartwarming happily ever after emotional chemistry "
@@ -1337,52 +1083,17 @@ _MOOD_QUERY_MAP: dict[str, str] = {
         "uplifting redemptive second-chance inspiring overcoming obstacles "
         "optimistic warm triumphant resilience healing growth transformation"
     ),
-    "tense":         (
-        "unbearable suspense relentless pacing paranoia unstoppable countdown "
-        "nail-biting gripping can't-put-down anxiety high-stakes nerve-shredding"
-    ),
-    "dreamy":        (
-        "lyrical poetic atmospheric otherworldly magical surreal lush "
-        "languid evocative sensory immersive soft ethereal enchanting"
-    ),
-    "reflective":    (
-        "quiet contemplative introspective meditative inner-life prose "
-        "slow-burn character study melancholic thoughtful consciousness"
-    ),
-    "contemporary romance": (
-        "modern love story contemporary romance relatable characters emotional connection "
-        "witty banter second chance happily ever after"
-    ),
-    "historical romance": (
-        "regency romance period romance historical love story aristocracy ballroom "
-        "forbidden love Austen-esque witty heroine passionate hero"
-    ),
-    "slow burn romance": (
-        "slow burn romance longing unresolved tension enemies to lovers "
-        "friends to lovers restrained desire emotional payoff"
-    ),
+    "tense":         ("unbearable suspense relentless pacing paranoia unstoppable countdown " "nail-biting gripping can't-put-down anxiety high-stakes nerve-shredding" ),
+    "dreamy":        ( "lyrical poetic atmospheric otherworldly magical surreal lush "  "languid evocative sensory immersive soft ethereal enchanting"  ),
+    "reflective":    ("quiet contemplative introspective meditative inner-life prose " "slow-burn character study melancholic thoughtful consciousness"),
+    "contemporary romance": (  "modern love story contemporary romance relatable characters emotional connection ""witty banter second chance happily ever after"),
+    "historical romance": ( "regency romance period romance historical love story aristocracy ballroom " "forbidden love Austen-esque witty heroine passionate hero" ),
+    "slow burn romance": ("slow burn romance longing unresolved tension enemies to lovers ""friends to lovers restrained desire emotional payoff"),
 }
 
-_PROSE_STOP = {
-    "a","an","the","and","or","but","in","on","at","to","for","of","with","by",
-    "from","as","is","are","was","were","be","been","being","have","has","had",
-    "do","does","did","will","would","could","should","may","might","that","which",
-    "who","this","these","those","their","its","his","her","our","your","it",
-    "they","we","you","he","she","not","no","nor","so","yet","both","either",
-    "neither","each","few","more","most","other","some","such","than","too","very",
-    "just","because","if","while","where","when","how","what","kind","type","sort",
-    "rather","also","there","here","then","now","still","only","even","about",
-    "into","through","before","after","once","same","can","need","like","feel",
-    "reader","book","story","novel","prose","character","characters","narrator",
-    "page","pages","chapter","plot","ending","beginning","middle",
-}
+_PROSE_STOP = { "a","an","the","and","or","but","in","on","at","to","for","of","with","by",  "from","as","is","are","was","were","be","been","being","have","has","had", "do","does","did","will","would","could","should","may","might","that","which", "who","this","these","those","their","its","his","her","our","your","it", "they","we","you","he","she","not","no","nor","so","yet","both","either", "neither","each","few","more","most","other","some","such","than","too","very","just","because","if","while","where","when","how","what","kind","type","sort", "rather","also","there","here","then","now","still","only","even","about", "into","through","before","after","once","same","can","need","like","feel","reader","book","story","novel","prose","character","characters","narrator","page","pages","chapter","plot","ending","beginning","middle",}
 
-_GENRE_DOMINANT_MOODS = {
-    "romance","romantic","slow burn romance","love story",
-    "contemporary romance","historical romance",
-    "fantasy","mystery","thriller","horror","sci-fi",
-    "crime","biography","self-help","comedy",
-}
+_GENRE_DOMINANT_MOODS = { "romance","romantic","slow burn romance","love story", "contemporary romance","historical romance", "fantasy","mystery","thriller","horror","sci-fi",  "crime","biography","self-help","comedy",}
 
 def _is_genre_dominant(mood: str) -> bool:
     m  = mood.lower().strip()
@@ -1390,28 +1101,20 @@ def _is_genre_dominant(mood: str) -> bool:
     mk = _match_mood_key(m)
     return mk in _GENRE_DOMINANT_MOODS if mk else False
 
-
 def _build_semantic_query(mood: str, context: dict, use_llm: bool = True) -> str:
-    """
-    Genre-dominant moods bypass LLM expansion to preserve FAISS precision.
-    """
     mood_lower = mood.lower().strip()
-
-    # Genre-dominant: skip LLM, go straight to curated query map
     if _is_genre_dominant(mood_lower):
         if mood_lower in _MOOD_QUERY_MAP:
             return _MOOD_QUERY_MAP[mood_lower]
         for mk, q in _MOOD_QUERY_MAP.items():
             if mk in mood_lower or mood_lower in mk:
                 return q
-
     if use_llm:
         try:
             expanded = _expand_mood(mood, context)
             if expanded and expanded != mood: return expanded
         except Exception:
             pass
-
     ctx = context or {}
     for ck in ("season", "time_of_day", "travel", "reading_time"):
         ctx_key = ctx.get(ck, "").lower().strip()
@@ -1419,64 +1122,39 @@ def _build_semantic_query(mood: str, context: dict, use_llm: bool = True) -> str
         if ctx_key in _MOOD_QUERY_MAP: return _MOOD_QUERY_MAP[ctx_key]
         for mk, q in _MOOD_QUERY_MAP.items():
             if mk in ctx_key or ctx_key in mk: return q
-
     if mood_lower in _MOOD_QUERY_MAP: return _MOOD_QUERY_MAP[mood_lower]
     for mk, q in _MOOD_QUERY_MAP.items():
         if mk in mood_lower or mood_lower in mk: return q
-
     words     = re.findall(r"[a-z]{4,}", mood_lower)
     key_terms = [w for w in words if w not in _PROSE_STOP]
     return " ".join(key_terms[:20]) if key_terms else mood_lower
 
-# READING-TIME RECOMMENDATION
-# Uses page count (when available) to return books that genuinely fit the
-# reading window.  Falls back gracefully to genre+semantic when no page data.
-# Page-count bands for each reading-time key.
-# Averages: ~1 page/min relaxed reading → 30 min ≈ ≤200 p, 2 h ≈ 200-400 p
+# reading-time recommendation
 _READING_TIME_PAGES: dict[str, tuple[int, int]] = {
-    "30 minutes": (0,   220),   # slim novels, novellas, short books
-    "2 hours":    (150, 420),   # standard novels
-    "weekend":    (350, 9999),  # doorstoppers, epics, sagas
+    "30 minutes": (0,   220),
+    "2 hours":    (150, 420),
+    "weekend":    (350, 9999),
 }
 
-# Genres that reliably signal LENGTH regardless of page data.
-# When page data is unavailable we score these as proxies.
 _SHORT_BOOK_GENRES  = {"comedy","romance","young-adult","fiction","mystery","thriller","horror"}
 _LONG_BOOK_GENRES   = {"fantasy","sci-fi","history","classics","biography","literary"}
 _MEDIUM_BOOK_GENRES = {"thriller","mystery","romance","fiction","young-adult","crime","paranormal"}
 
-# Title/keyword signals for short vs long books (last-resort heuristic)
-_SHORT_TITLE_SIGNALS = [
-    "short", "novella", "tale", "story", "fable", "brief", "little",
-    "slim", "quick", "micro", "mini",
-]
-_LONG_TITLE_SIGNALS = [
-    "saga", "epic", "complete", "collection", "trilogy", "chronicles",
-    "omnibus", "boxed", "boxset", "volume", "series", "compendium",
-]
+_SHORT_TITLE_SIGNALS = [ "short", "novella", "tale", "story", "fable", "brief", "little","slim", "quick", "micro", "mini",]
+_LONG_TITLE_SIGNALS = [ "saga", "epic", "complete", "collection", "trilogy", "chronicles",  "omnibus", "boxed", "boxset", "volume", "series", "compendium",]
 
 def _page_length_score(row_idx: int, reading_time_key: str) -> float:
-    """
-    Returns 0.0–1.0 score: how well a book's length fits the reading window.
-    1.0 = perfect fit, 0.5 = plausible, 0.0 = wrong length entirely.
-    """
     pages = int(books.iloc[row_idx]["_pages"])
     lo, hi = _READING_TIME_PAGES[reading_time_key]
-
     if pages > 10:
-        # Have page data — score by how well it falls in the band
         if lo <= pages <= hi:
-            # Perfect: smooth peak at band centre
             centre   = (lo + hi) / 2 if hi < 9000 else lo + 200
             distance = abs(pages - centre)
             width    = max((hi - lo) / 2, 50)
             return max(0.4, 1.0 - (distance / (width * 2)))
-        # Outside band — penalise proportionally
         overshoot = max(pages - hi, lo - pages)
         penalty   = min(1.0, overshoot / 300)
         return max(0.0, 0.35 - penalty)
-
-    # No page data — use genre and title as proxy
     tags  = set(_get_effective_tags(row_idx))
     title = books.iloc[row_idx].get("title_clean", "").lower()
     if reading_time_key == "30 minutes":
@@ -1490,7 +1168,7 @@ def _page_length_score(row_idx: int, reading_time_key: str) -> float:
         if tags & _MEDIUM_BOOK_GENRES: return 0.65
         if tags & _LONG_BOOK_GENRES:   return 0.25
         return 0.45
-    else:  # weekend
+    else:
         if any(s in title for s in _LONG_TITLE_SIGNALS): return 0.85
         if tags & {"epic-fantasy","high-fantasy","classics","history"}: return 0.8
         if tags & _SHORT_BOOK_GENRES:  return 0.15
@@ -1503,40 +1181,26 @@ def recommend_by_reading_time(
     seed_titles:      list[str] | None = None,
     user_id:          int       | None = None,
 ) -> list[dict]:
-    """
-    Dedicated reading-time recommender.
-    Scores every candidate from a relevant genre pool by page-count fit,
-    then fuses with rating + semantic score.
-    """
     if reading_time_key not in _READING_TIME_PAGES:
         return []
-
     genre_keys = _MOOD_TO_GENRES.get(reading_time_key, [])
-    excl_key   = reading_time_key  # use the reading-time exclusion rules
-
-    # ── Build candidate pool from genre index ────────────────────────────────
+    excl_key   = reading_time_key
     seen_set, candidate_sets = set(), []
     for g in genre_keys:
         arr = _GENRE_INDEX.get(g)
         if arr is None or len(arr) == 0: continue
         new_idx = arr[~np.isin(arr, list(seen_set))]
         if len(new_idx): candidate_sets.append(new_idx); seen_set.update(new_idx.tolist())
-
     if not candidate_sets:
-        # Absolute fallback: well-rated books from any genre, score by page fit
         candidates = np.argsort(books["_trend_score"].values)[::-1][:500]
     else:
         candidates = np.concatenate(candidate_sets)
-
-    # Apply exclusions
     candidates = np.array(
         [i for i in candidates if not _is_excluded_from_genre(int(i), excl_key)],
         dtype=np.int32,
     )
     if len(candidates) == 0:
         return trending_books(top_n)
-
-    # ── Score by page-length fit + rating popularity ─────────────────────────
     rng = np.random.default_rng(seed=_stable_rng_seed(reading_time_key + str(offset)))
     page_scores   = np.array([_page_length_score(int(i), reading_time_key) for i in candidates])
     rating_scores = (
@@ -1546,16 +1210,11 @@ def recommend_by_reading_time(
     if rating_scores.max() > 0:
         rating_scores = rating_scores / rating_scores.max()
     jitter        = rng.random(len(candidates)) * 0.06
-    # Page fit is primary signal (0.55), rating secondary (0.40), jitter for variety
     combined      = 0.55 * page_scores + 0.40 * rating_scores + jitter
-
     sorted_order  = np.argsort(combined)[::-1]
     sorted_idx    = candidates[sorted_order]
-
-    # Apply offset for section diversity
     if offset > 0 and len(sorted_idx) > offset:
         sorted_idx = sorted_idx[offset:]
-
     chosen = list(sorted_idx[:top_n])
     return _rows_to_dicts_fast(chosen)
 
@@ -1572,8 +1231,6 @@ def recommend_by_mood_semantic(
 ) -> list[dict]:
     clean_seeds = [t for t in (seed_titles or []) if isinstance(t, str) and t.strip()]
     mood_key    = _match_mood_key(mood.lower().strip()) or mood.lower().strip()
-
-    # ── Reading-time buckets: route to dedicated page-length scorer ──────────
     if mood_key in _READING_TIME_KEYS:
         result = recommend_by_reading_time(
             reading_time_key=mood_key,
@@ -1582,7 +1239,6 @@ def recommend_by_mood_semantic(
         )
         if len(result) >= max(4, top_n // 3):
             return result
-        # Not enough results — fall through to standard semantic path
     ctx            = context or {}
     semantic_query = _build_semantic_query(mood, ctx, use_llm=use_llm)
     force_blend    = _is_genre_dominant(mood)
@@ -1598,132 +1254,42 @@ def recommend_by_mood_semantic(
         force_genre_blend=force_blend,
         genre_filter=genre_filter, offset=offset,
     )
-# GENRE BROWSE
 
+# genre browse
 _GENRE_TAG_MAP = {
-    "romance": {
-        "romance","romance-novels","romantic","contemporary-romance","historical-romance",
-        "paranormal-romance","love-story","romantic-suspense","regency-romance","chick-lit",
-        "romance-contemporary","romance-historical","romance-paranormal","new-adult-romance",
-        "adult-romance","romances","romantic-fiction","clean-romance","sweet-romance",
-        "inspirational-romance","christian-romance","sports-romance","billionaire-romance",
-        "second-chance-romance","enemies-to-lovers","slow-burn","slow-burn-romance",
-        "friends-to-lovers","forbidden-romance","small-town-romance","office-romance",
-        "fake-dating","marriage-of-convenience","arranged-marriage",
-    },
-    "fantasy": {
-        "fantasy","epic-fantasy","high-fantasy","dark-fantasy","urban-fantasy",
-        "magic","wizards","sword-and-sorcery","fairy-tales","mythology","dragons",
-    },
-    "fiction": {
-        "fiction","literary-fiction","contemporary-fiction","general-fiction","literary",
-    },
-    "mystery": {
-        "mystery","mysteries","detective","cozy-mystery","whodunit","noir","crime-fiction",
-    },
-    "thriller": {
-        "thriller","suspense","psychological-thriller","legal-thriller","spy","espionage",
-    },
-    "horror": {
-        "horror","gothic","supernatural","scary",
-    },
-    "science fiction": {
-        "science-fiction","sci-fi","scifi","space","dystopia","dystopian",
-        "cyberpunk","steampunk","aliens","post-apocalyptic","science fiction",
-    },
-    "sci-fi": {
-        "science-fiction","sci-fi","scifi","space","dystopia","dystopian",
-        "cyberpunk","steampunk","aliens","post-apocalyptic","science fiction",
-    },
-    "biography": {
-        "biography","autobiography","memoir","memoirs","true-story","biographies",
-    },
-    "history": {
-        "history","historical","historical-fiction","historical-novel",
-    },
-    "classics": {
-        "classics","classic","classic-literature",
-    },
-    "self-help": {
-        "self-help","personal-development","productivity","motivation","self-improvement",
-        "selfhelp",
-    },
-    "comedy": {
-        "comedy","humor","humour","funny","satire",
-    },
-    "adventure": {
-        "adventure","action","action-adventure","survival","quest",
-    },
-    "young-adult": {
-        "young-adult","ya","teen","coming-of-age",
-    },
-    "children": {
-        "children","childrens","kids","middle-grade",
-    },
-    "non-fiction": {
-        "non-fiction","nonfiction","true-crime","essays",
-    },
-    "paranormal": {
-        "paranormal","vampires","werewolves","witches","supernatural",
-    },
-    "psychology": {
-        "psychology","mental-health",
-    },
-    "philosophy": {
-        "philosophy","ethics",
-    },
-    "poetry": {
-        "poetry","poems","verse",
-    },
-    "graphic novel": {
-        "graphic-novel","comics","manga",
-    },
-    "crime": {
-        "crime","detective","true-crime","murder","police","noir",
-    },
-}
+    "romance": { "romance","romance-novels","romantic","contemporary-romance","historical-romance","paranormal-romance","love-story","romantic-suspense","regency-romance","chick-lit", "romance-contemporary","romance-historical","romance-paranormal","new-adult-romance", "adult-romance","romances","romantic-fiction","clean-romance","sweet-romance", "inspirational-romance","christian-romance","sports-romance","billionaire-romance", "second-chance-romance","enemies-to-lovers","slow-burn","slow-burn-romance","friends-to-lovers","forbidden-romance","small-town-romance","office-romance", "fake-dating","marriage-of-convenience","arranged-marriage",  },
+    "fantasy": {"fantasy","epic-fantasy","high-fantasy","dark-fantasy","urban-fantasy",  "magic","wizards","sword-and-sorcery","fairy-tales","mythology","dragons", },
+    "fiction": {"fiction","literary-fiction","contemporary-fiction","general-fiction","literary",},
+    "mystery": { "mystery","mysteries","detective","cozy-mystery","whodunit","noir","crime-fiction", },
+    "thriller": { "thriller","suspense","psychological-thriller","legal-thriller","spy","espionage", },
+    "horror": { "horror","gothic","supernatural","scary", },
+    "science fiction": {"science-fiction","sci-fi","scifi","space","dystopia","dystopian", "cyberpunk","steampunk","aliens","post-apocalyptic","science fiction",},
+    "sci-fi": { "science-fiction","sci-fi","scifi","space","dystopia","dystopian", "cyberpunk","steampunk","aliens","post-apocalyptic","science fiction", },
+    "biography": {"biography","autobiography","memoir","memoirs","true-story","biographies", },
+    "history": { "history","historical","historical-fiction","historical-novel", },
+    "classics": {"classics","classic","classic-literature",},
+    "self-help": {"self-help","personal-development","productivity","motivation","self-improvement","selfhelp", },
+    "comedy": { "comedy","humor","humour","funny","satire",  },
+    "adventure": { "adventure","action","action-adventure","survival","quest", },
+    "young-adult": { "young-adult","ya","teen","coming-of-age", },
+    "children": {"children","childrens","kids","middle-grade", },
+    "non-fiction": { "non-fiction","nonfiction","true-crime","essays",},
+    "paranormal": {"paranormal","vampires","werewolves","witches","supernatural",},
+    "psychology": { "psychology","mental-health",},
+    "philosophy": {"philosophy","ethics", },
+    "poetry": {"poetry","poems","verse",},
+    "graphic novel": {"graphic-novel","comics","manga",},
+    "crime": {"crime","detective","true-crime","murder","police","noir",},}
 
-_ROMANCE_CLASSICS_TITLES = {
-    "pride and prejudice", "sense and sensibility", "emma",
-    "persuasion", "northanger abbey", "mansfield park",
-    "jane eyre", "wuthering heights", "rebecca", "gone with the wind",
-    "anna karenina", "the age of innocence", "north and south",
-    "wives and daughters", "little women", "the scarlet letter",
-    "tess of the d'urbervilles", "far from the madding crowd",
-    "a room with a view", "howard's end", "the notebook", "me before you",
-    "outlander", "the time traveler's wife", "atonement", "one day",
-    "ps i love you", "the fault in our stars", "twilight",
-    "fifty shades of grey", "the kiss quotient", "beach read",
-    "the hating game", "it ends with us", "ugly love", "verity", "fourth wing",
-}
+_ROMANCE_CLASSICS_TITLES = {"pride and prejudice", "sense and sensibility", "emma","persuasion", "northanger abbey", "mansfield park","jane eyre", "wuthering heights", "rebecca", "gone with the wind","anna karenina", "the age of innocence", "north and south","wives and daughters", "little women", "the scarlet letter","tess of the d'urbervilles", "far from the madding crowd","a room with a view", "howard's end", "the notebook", "me before you","outlander", "the time traveler's wife", "atonement", "one day","ps i love you", "the fault in our stars", "twilight", "the kiss quotient", "beach read","the hating game", "it ends with us", "ugly love", "verity",}
 
-_SHELF_TAGS = {
-    "favorites","favourite","owned","books-i-own","to-read","toread","read",
-    "currently-reading","re-read","school","library","my-books","bookshelf",
-    "default","kindle","ebook","audiobook","did-not-finish","dnf","maybe",
-    "wishlist","borrowed","novel","novels","book","books","english","american",
-    "british","i-own","have","want","buy","recommended","challenge","book-club",
-    "series","owned","literature","fiction",
-}
+_SHELF_TAGS = { "favorites","favourite","owned","books-i-own","to-read","toread","read","currently-reading","re-read","school","library","my-books","bookshelf","default","kindle","ebook","audiobook","did-not-finish","dnf","maybe", "wishlist","borrowed","novel","novels","book","books","english","american","british","i-own","have","want","buy","recommended","challenge","book-club","series","owned","literature","fiction",}
 
-_GENRE_SCORE_THRESHOLDS = {
-    "romance":0.05,"fiction":0.10,"fantasy":0.10,"mystery":0.10,"thriller":0.10,
-    "horror":0.10,"science fiction":0.08,"sci-fi":0.08,"young-adult":0.08,
-    "biography":0.10,"history":0.10,"self-help":0.10,"non-fiction":0.10,
-    "crime":0.10,"paranormal":0.08,"classics":0.08,"adventure":0.08,"_default":0.12,
-}
+_GENRE_SCORE_THRESHOLDS = {"romance":0.05,"fiction":0.10,"fantasy":0.10,"mystery":0.10,"thriller":0.10,"horror":0.10,"science fiction":0.08,"sci-fi":0.08,"young-adult":0.08,"biography":0.10,"history":0.10,"self-help":0.10,"non-fiction":0.10, "crime":0.10,"paranormal":0.08,"classics":0.08,"adventure":0.08,"_default":0.12,}
 
-_GENRE_MIN_RATINGS = {
-    "romance":50,"fiction":30,"fantasy":30,"mystery":30,"thriller":30,
-    "horror":20,"science fiction":20,"sci-fi":20,"young-adult":20,
-    "biography":15,"history":15,"self-help":15,"non-fiction":10,"crime":20,
-    "paranormal":10,"classics":30,"adventure":20,"_default":10,
-}
+_GENRE_MIN_RATINGS = { "romance":50,"fiction":30,"fantasy":30,"mystery":30,"thriller":30,"horror":20,"science fiction":20,"sci-fi":20,"young-adult":20,"biography":15,"history":15,"self-help":15,"non-fiction":10,"crime":20, "paranormal":10,"classics":30,"adventure":20,"_default":10,}
 
 def _score_genre_match(tags: list[str], approved: set) -> float:
-    """
-    Uses exact-token match to prevent substring false positives.
-    """
     if not tags: return 0.0
     real_tags = [t for t in tags if t not in _SHELF_TAGS]
     if not real_tags: return 0.0
@@ -1731,11 +1297,8 @@ def _score_genre_match(tags: list[str], approved: set) -> float:
     hits = 0.0
     for t in real_tags:
         t_norm = t.replace("-", " ").replace("_", " ")
-        # Exact match (normalised)
         if t in approved or t_norm in approved_norm:
             hits += 1.0; continue
-        # Word-set containment (both directions), but require ≥2 words to avoid
-        # single short tokens like 'fiction' matching everything
         matched = False
         for a_norm in approved_norm:
             a_words = a_norm.split()
@@ -1744,32 +1307,18 @@ def _score_genre_match(tags: list[str], approved: set) -> float:
                 hits += 0.5; matched = True; break
             if len(t_words) >= 2 and all(w in a_words for w in t_words):
                 hits += 0.5; matched = True; break
-        # No single-word substring fallback — that was the source of false positives
-        _ = matched  # suppress unused warning
+        _ = matched
     return min(1.0, hits / len(real_tags))
 
-_GENRE_CANONICAL: dict[str, str] = {
-    "science fiction":"science fiction","science-fiction":"science fiction",
-    "sci-fi":"science fiction","scifi":"science fiction","sf":"science fiction",
-    "selfhelp":"self-help","self help":"self-help",
-    "ya":"young-adult","young adult":"young-adult","teen":"young-adult",
-    "nonfiction":"non-fiction","non fiction":"non-fiction",
-    "graphic-novel":"graphic novel","comics":"graphic novel","manga":"graphic novel",
-    "memoir":"biography","autobiography":"biography","biographies":"biography",
-    "historical":"history","historical-fiction":"history",
-    "classic":"classics","classic-literature":"classics",
-    "detective":"mystery","cozy-mystery":"mystery","whodunit":"mystery",
-    "true-crime":"crime","murder":"crime",
-    "vampires":"paranormal","werewolves":"paranormal","witches":"paranormal",
-    "humor":"comedy","humour":"comedy","funny":"comedy","satire":"comedy",
-}
+_GENRE_CANONICAL: dict[str, str] = {"science fiction":"science fiction","science-fiction":"science fiction", "sci-fi":"science fiction","scifi":"science fiction","sf":"science fiction", "selfhelp":"self-help","self help":"self-help","ya":"young-adult","young adult":"young-adult","teen":"young-adult", "nonfiction":"non-fiction","non fiction":"non-fiction","graphic-novel":"graphic novel","comics":"graphic novel","manga":"graphic novel","memoir":"biography","autobiography":"biography","biographies":"biography","historical":"history","historical-fiction":"history",
+    "classic":"classics","classic-literature":"classics","detective":"mystery","cozy-mystery":"mystery","whodunit":"mystery", "true-crime":"crime","murder":"crime","vampires":"paranormal","werewolves":"paranormal","witches":"paranormal", "humor":"comedy","humour":"comedy","funny":"comedy","satire":"comedy",}
+
 def recommend_by_genre(genre: str, top_n: int = 9999) -> list[dict]:
     if not genre: return []
     g_raw  = genre.lower().strip()
     g      = _GENRE_CANONICAL.get(g_raw, g_raw)
     g_norm = g.replace(" ", "-")
     print(f"[recommend_by_genre] genre={genre!r} → canonical={g!r}")
-
     approved = None
     for candidate in [g, g_norm, g_raw]:
         if candidate in _GENRE_TAG_MAP:
@@ -1785,7 +1334,6 @@ def recommend_by_genre(genre: str, top_n: int = 9999) -> list[dict]:
     if approved is None:
         approved = {g, g_norm, g_raw, g + "-fiction", g + "-novels"}
         print(f"[recommend_by_genre] WARNING: fallback tag set for {g!r}")
-
     scores_list = []
     for row_idx in range(len(books)):
         if _is_excluded_from_genre(row_idx, g):
@@ -1793,21 +1341,18 @@ def recommend_by_genre(genre: str, top_n: int = 9999) -> list[dict]:
         else:
             scores_list.append(_score_genre_match(_get_effective_tags(row_idx), approved))
     scores_arr = pd.Series(scores_list, index=books.index)
-
     if g == "romance":
         for row_idx in range(len(books)):
             title_lc = str(books.iloc[row_idx].get("title_clean", ""))
             if any(classic in title_lc for classic in _ROMANCE_CLASSICS_TITLES):
                 if scores_arr.iat[row_idx] < 0.05:
                     scores_arr.iat[row_idx] = 0.3
-
     THRESHOLD   = _GENRE_SCORE_THRESHOLDS.get(g, _GENRE_SCORE_THRESHOLDS["_default"])
     min_ratings = _GENRE_MIN_RATINGS.get(g, _GENRE_MIN_RATINGS["_default"])
     mask     = (scores_arr >= THRESHOLD) & (books["rating_count"] >= min_ratings)
     filtered = books[mask].copy()
     filtered["_genre_score"] = scores_arr[mask]
     print(f"[recommend_by_genre] primary filter: {len(filtered)} books")
-
     if len(filtered) < 10:
         mask2    = scores_arr >= THRESHOLD
         filtered = books[mask2].copy()
@@ -1821,7 +1366,6 @@ def recommend_by_genre(genre: str, top_n: int = 9999) -> list[dict]:
     if filtered.empty:
         print(f"[recommend_by_genre] WARNING: empty result for {g!r}")
         return []
-
     filtered["_final_score"] = (
         filtered["_genre_score"]
         * filtered["average_rating"]
@@ -1837,7 +1381,7 @@ def recommend_by_genre(genre: str, top_n: int = 9999) -> list[dict]:
     print(f"[recommend_by_genre] returning {len(result)} books for genre={g!r}")
     return result
 
-# AUTHOR / TITLE / DESCRIPTION
+# author / title recommendations
 @lru_cache(maxsize=256)
 def recommend_by_author(author: str, top_n: int = 20) -> list:
     if not author: return []
@@ -1850,52 +1394,66 @@ def recommend_by_author(author: str, top_n: int = 20) -> list:
     )
 
 def recommend_by_title(title: str, top_n: int = 10) -> list:
-    
     if not title: return []
     idx = _title_to_idx(title)
     if idx is None: return []
-    # Shape guard: cosine_sim may be NxN from a different-sized dataset snapshot
-    if (cosine_sim is not None
-            and hasattr(cosine_sim, "shape")
-            and cosine_sim.shape[0] == len(books)):
-        row = cosine_sim[idx]
-        # Sparse matrix → dense 1D array
-        if hasattr(row, "toarray"):
-            sims = np.asarray(row.toarray()).flatten()
-        else:
-            sims = np.asarray(row).flatten()
-        sims = sims.copy()
-    else:
-        sims = cosine_similarity(_tfidf_matrix[idx], _tfidf_matrix).flatten()
-
+    # use tfidf_matrix directly — avoids cosine_sim shape mismatch on reload
+    sims = cosine_similarity(_tfidf_matrix[idx], _tfidf_matrix).flatten()
     sims[idx] = 0.0
     top_idxs  = np.argsort(sims)[::-1][:top_n]
     valid     = top_idxs[sims[top_idxs] > 0]
     return _rows_to_dicts_parallel(books.iloc[valid], top_n)
 
+# description search
 def recommend_by_description(
     description:  str,
     top_n:        int          = 10,
     liked_titles: list | None  = None,
     saved_titles: list | None  = None,
 ) -> list:
-    if not description or not description.strip(): return []
+
+    if not description or not description.strip():
+        return []
+
     seed_titles = [t for t in ((liked_titles or []) + (saved_titles or []))
                    if isinstance(t, str) and t.strip()]
+    intent_key = _detect_description_intent(description)
+
     if _sem_ready:
-        return recommend_fused(semantic_query=description, seed_titles=seed_titles, top_n=top_n)
+        raw_results = recommend_fused( semantic_query=description, seed_titles=seed_titles, top_n=top_n * 4, genre_filter=intent_key, )
+        filtered = []
+        for book_dict in raw_results:
+            title = str(book_dict.get("title", "")).lower().strip()
+            if _is_title_blacklisted(title):
+                continue
+            row_idx = _title_clean_to_row_idx.get(title)
+            if row_idx is not None:
+                if not _passes_description_filter(row_idx, intent_key):
+                    continue
+            filtered.append(book_dict)
+            if len(filtered) >= top_n:
+                break
+        return filtered[:top_n]
+
+    # TF-IDF fallback
     q_vec = _tfidf.transform([description.lower().strip()])
     sims  = cosine_similarity(q_vec, _tfidf_matrix).flatten()
     seed_indices = _titles_to_indices(seed_titles)
     if seed_indices:
-        sims = _apply_rl_rerank(sims, seed_indices)   # already normalised to [0,1]
-    top_idxs = np.argsort(sims)[::-1][:top_n]
-    valid    = top_idxs[sims[top_idxs] > 0]
+        sims = _apply_rl_rerank(sims, seed_indices)
+    top_idxs = np.argsort(sims)[::-1]
+    valid = []
+    for idx in top_idxs:
+        if sims[idx] <= 0:
+            break
+        if _passes_description_filter(int(idx), intent_key):
+            valid.append(idx)
+        if len(valid) >= top_n:
+            break
     return _rows_to_dicts_parallel(books.iloc[valid], top_n)
 
-# SAVED + LIKED / COLLABORATIVE / TRENDING
+# saved / liked / collaborative / trending
 def _seed_titles_to_query(seed_titles: list[str]) -> str:
-    """Fallback (no LLM) — build query from book descriptions."""
     desc_parts = []
     for t in seed_titles[:5]:
         idx = _title_to_idx(t)
@@ -1908,7 +1466,21 @@ def _seed_titles_to_query(seed_titles: list[str]) -> str:
                 desc_parts.append(genre)
     return " ".join(desc_parts) if desc_parts else " ".join(seed_titles[:5])
 
-# ── LLM taste-profile prompts ─────────────────────────────────────────────────
+def _build_beginner_query(user_genres: list[str] | None = None) -> str:
+    if user_genres:
+        genre_queries = []
+        for g in user_genres[:3]:
+            g_lower = g.lower().strip()
+            if g_lower in _MOOD_QUERY_MAP:
+                genre_queries.append(_MOOD_QUERY_MAP[g_lower])
+            else:
+                genre_queries.append(g_lower)
+        return " ".join(genre_queries)
+    return (
+        "popular bestselling fiction novel highly rated engaging "
+        "compelling characters emotional literary fiction thriller mystery romance"
+    )
+
 _TASTE_SYSTEM_PROMPT = (
     "You are a book recommendation engine. Analyse the list of books a reader "
     "has liked, saved, or read. Identify the common threads: themes, emotional "
@@ -1917,14 +1489,12 @@ _TASTE_SYSTEM_PROMPT = (
     "a search query for finding similar books. Be specific and evocative. "
     "Do NOT list the books back. Do NOT name genres. Do NOT use bullet points."
 )
-
 def _build_taste_profile(
     liked_titles:  list[str],
     saved_titles:  list[str],
     read_titles:   list[str] | None = None,
     user_genres:   list[str] | None = None,
 ) -> str:
-    """Use LLM to synthesise a reader's taste profile from their library."""
     all_seeds = list(dict.fromkeys(
         (liked_titles or []) + (read_titles or []) + (saved_titles or [])
     ))[:8]
@@ -1976,7 +1546,6 @@ def _build_taste_profile(
         except Exception as e:
             print(f"[taste_profile] {model_name}: {e}")
             continue
-    # LLM unavailable — fall back to description concat
     return _seed_titles_to_query(all_seeds[:5])
 
 def recommend_from_saved_liked(
@@ -1988,24 +1557,16 @@ def recommend_from_saved_liked(
     user_action:   str  | None = None,
     context_title: str  | None = None,
 ) -> list:
-    
     liked_titles = [t for t in (liked_titles or []) if isinstance(t, str) and t.strip()]
     saved_titles = [t for t in (saved_titles or []) if isinstance(t, str) and t.strip()]
     read_titles  = [t for t in (read_titles  or []) if isinstance(t, str) and t.strip()]
     all_seeds    = list(dict.fromkeys(liked_titles + read_titles + saved_titles))
 
     if not all_seeds:
-        # Beginner path — no library yet
         query = _build_beginner_query(user_genres)
         return recommend_fused(semantic_query=query, top_n=top_n)
 
-    semantic_query = _build_taste_profile(
-        liked_titles=liked_titles,
-        saved_titles=saved_titles,
-        read_titles=read_titles,
-        user_genres=user_genres,
-    )
-    # If a specific book triggered this call, blend taste profile with book context
+    semantic_query = _build_taste_profile( liked_titles=liked_titles,saved_titles=saved_titles,read_titles=read_titles, user_genres=user_genres,)
     if context_title:
         ctx_idx = _title_to_idx(context_title)
         if ctx_idx is not None:
@@ -2020,7 +1581,6 @@ def recommend_from_saved_liked(
             top_n=top_n,
             exclude_titles={t.lower() for t in all_seeds},
         )
-    # TF-IDF fallback
     seed_indices = _titles_to_indices(all_seeds)
     if not seed_indices: return []
     sim_matrix = cosine_similarity(_tfidf_matrix[seed_indices], _tfidf_matrix)
@@ -2067,7 +1627,7 @@ def book_recommender(user_id: int, top_n: int = 10) -> list:
 def trending_books(top_n: int = 20) -> list:
     return _rows_to_dicts_parallel(books.iloc[_trending_order[:top_n]], top_n)
 
-# SEARCH AUTOCOMPLETE
+# search autocomplete
 def search_autocomplete(query: str, limit: int = 10) -> list:
     if not query or not query.strip(): return []
     q = query.lower().strip()
@@ -2089,10 +1649,9 @@ def search_autocomplete(query: str, limit: int = 10) -> list:
     ranked["_s"] = ranked["average_rating"] * (ranked["rating_count"].astype(float) ** 0.3)
     return _rows_to_dicts_parallel(ranked.sort_values("_s", ascending=False), limit)
 
-# NEW RELEASES / HYBRID
+# new releases / hybrid recommend
 def fetch_new_releases(max_results: int = 20) -> list | dict:
     queries = ["subject:fiction","subject:thriller","subject:romance","subject:fantasy","subject:mystery"]
-
     def _fetch_query(q: str) -> list:
         out = []
         try:
@@ -2174,50 +1733,27 @@ def hybrid_recommend(
 
 def trending_and_new_books(top_n: int = 20, new_n: int = 20) -> dict:
     return {"trending": trending_books(top_n), "new": fetch_new_releases(new_n)}
-
-# TIME + SEASON + SMART HOME
+# time + season + smart home
 def get_current_season() -> str:
     m = datetime.now().month
     return ("winter" if m in (12, 1, 2) else "spring" if m in (3, 4, 5)
             else "summer" if m in (6, 7, 8) else "autumn")
 
 _SEASON_CONFIG = {
-    "summer": {"label":"Summer Reads","message":"Sun-soaked stories for long bright days",
-               "genres":["adventure","romance","thriller","comedy"],
-               "mood":"beach holiday adventure sun romance light-hearted escapism warm fast-paced"},
-    "winter": {"label":"Winter Reads","message":"Curl up with something long and immersive",
-               "genres":["fantasy","classics","mystery","horror"],
-               "mood":"epic fantasy cosy long immersive dark saga fireside cold winter"},
-    "spring": {"label":"Spring Reads","message":"Fresh stories for new beginnings",
-               "genres":["fiction","romance","young-adult","poetry"],
-               "mood":"new beginnings hope renewal growth optimistic fresh character"},
-    "autumn": {"label":"Autumn Reads","message":"Rich, literary reads for crisp evenings",
-               "genres":["mystery","thriller","history","classics"],
-               "mood":"nostalgia literary atmospheric detective gothic crime melancholic autumn"},
+    "summer": {"label":"Summer Reads","message":"Sun-soaked stories for long bright days",  "genres":["adventure","romance","thriller","comedy"], "mood":"beach holiday adventure sun romance light-hearted escapism warm fast-paced"},
+    "winter": {"label":"Winter Reads","message":"Curl up with something long and immersive","genres":["fantasy","classics","mystery","horror"],"mood":"epic fantasy cosy long immersive dark saga fireside cold winter"},
+    "spring": {"label":"Spring Reads","message":"Fresh stories for new beginnings", "genres":["fiction","romance","young-adult","poetry"],"mood":"new beginnings hope renewal growth optimistic fresh character"},
+    "autumn": {"label":"Autumn Reads","message":"Rich, literary reads for crisp evenings", "genres":["mystery","thriller","history","classics"],"mood":"nostalgia literary atmospheric detective gothic crime melancholic autumn"},
 }
 
 _TIME_CONFIG = {
-    "early_morning": {"label":"Rise and Shine","message":"Start your day right",
-                      "genres":["self-help","philosophy","poetry"],
-                      "mood":"clarity focus purpose mindfulness self-improvement essays philosophy calm morning"},
-    "morning":       {"label":"Morning Reads","message":"Perfect with your morning coffee",
-                      "genres":["crime","thriller","mystery"],
-                      "mood":"gripping detective crime procedural whodunit fast-paced engaging morning commute"},
-    "afternoon":     {"label":"Lunch Break","message":"Quick and gripping reads",
-                      "genres":["comedy","adventure","young-adult"],
-                      "mood":"light funny witty entertaining breezy romantic comedy adventure quick read"},
-    "late_afternoon":{"label":"Afternoon Escape","message":"Lose yourself in a great story",
-                      "genres":["fiction","literary","history"],
-                      "mood":"immersive literary character-driven emotional rich prose absorbing drama"},
-    "evening":       {"label":"Evening Wind-Down","message":"Wind down with these favourites",
-                      "genres":["thriller","mystery","crime"],
-                      "mood":"suspenseful tense psychological thriller page-turner atmospheric twisty gripping"},
-    "night":         {"label":"Bedtime Picks","message":"Perfect reads before you sleep",
-                      "genres":["romance","paranormal","classics"],
-                      "mood":"soothing tender romantic soft cosy heartwarming gentle love slow quiet comforting bedtime"},
-    "late_night":    {"label":"Past Midnight","message":"For those who read past midnight",
-                      "genres":["horror","thriller","sci-fi"],
-                      "mood":"dark psychological unsettling obsessive disturbing twisty horror suspense midnight"},
+    "early_morning": {"label":"Rise and Shine","message":"Start your day right","genres":["self-help","philosophy","poetry"],"mood":"clarity focus purpose mindfulness self-improvement essays philosophy calm morning"},
+    "morning":       {"label":"Morning Reads","message":"Perfect with your morning coffee","genres":["crime","thriller","mystery"],"mood":"gripping detective crime procedural whodunit fast-paced engaging morning commute"},
+    "afternoon":     {"label":"Lunch Break","message":"Quick and gripping reads","genres":["comedy","adventure","young-adult"], "mood":"light funny witty entertaining breezy romantic comedy adventure quick read"},
+    "late_afternoon":{"label":"Afternoon Escape","message":"Lose yourself in a great story","genres":["fiction","literary","history"], "mood":"immersive literary character-driven emotional rich prose absorbing drama"},
+    "evening":       {"label":"Evening Wind-Down","message":"Wind down with these favourites", "genres":["thriller","mystery","crime"], "mood":"suspenseful tense psychological thriller page-turner atmospheric twisty gripping"},
+    "night":         {"label":"Bedtime Picks","message":"Perfect reads before you sleep","genres":["romance","paranormal","classics"],"mood":"soothing tender romantic soft cosy heartwarming gentle love slow quiet comforting bedtime"},
+    "late_night":    {"label":"Past Midnight","message":"For those who read past midnight", "genres":["horror","thriller","sci-fi"], "mood":"dark psychological unsettling obsessive disturbing twisty horror suspense midnight"},
 }
 
 def get_time_slot() -> str:
@@ -2244,7 +1780,6 @@ def smart_home_recommendations(
     seed_titles  = (liked_titles + saved_titles)[:5]
     sections: list = []
 
-    # Global dedup — one book appears in at most one section.
     global_seen: set[str] = set()
     def _dedup(bl: list) -> list:
         out = []
@@ -2254,14 +1789,12 @@ def smart_home_recommendations(
                 global_seen.add(k); out.append(b)
         return out
 
-    # ── Personal (liked / saved) ─────────────────────────────────────────────
     if liked_titles or saved_titles:
         personal_books = recommend_from_saved_liked(liked_titles, saved_titles, top_n=top_n * 2)
         label_ = (f"Because You Liked {liked_titles[0]!r}" if liked_titles
                   else "Because You Saved These Books")
         sections.append({"heading": label_, "books": _dedup(personal_books)[:top_n]})
 
-    # ── Collaborative filtering ──────────────────────────────────────────────
     if user_id is not None:
         try:
             cf_books = book_recommender(user_id, top_n=top_n * 2)
@@ -2270,24 +1803,20 @@ def smart_home_recommendations(
         except Exception:
             pass
 
-    # ── Time-of-day section (offset 0) ──────────────────────────────────────
     time_books = recommend_by_mood_semantic(
         mood=_TIME_CONFIG[time_slot]["mood"],
         context={"time_of_day": time_slot, "season": season},
         seed_titles=seed_titles, user_id=user_id,
-        top_n=top_n * 3, use_llm=False,
-        offset=0,
+        top_n=top_n * 3, use_llm=False, offset=0,
     )
     sections.append({"heading": _TIME_CONFIG[time_slot]["label"],
                      "books": _dedup(time_books)[:top_n]})
 
-    # ── Season section (offset top_n to shift candidate window) ─────────────
     season_books = recommend_by_mood_semantic(
         mood=_SEASON_CONFIG[season]["mood"],
         context={"season": season},
         seed_titles=seed_titles, user_id=user_id,
-        top_n=top_n * 3, use_llm=False,
-        offset=top_n,
+        top_n=top_n * 3, use_llm=False, offset=top_n,
     )
     sections.append({"heading": _SEASON_CONFIG[season]["label"],
                      "books": _dedup(season_books)[:top_n]})
@@ -2296,15 +1825,11 @@ def smart_home_recommendations(
                      "books": _dedup(trending_books(top_n=top_n * 4))[:top_n]})
 
     return {
-        "slot":        time_slot,
-        "season":      season,
-        "label":       label,
-        "message":     message,
-        "semantic_on": _sem_ready,
-        "sections":    sections,
+        "slot": time_slot, "season": season, "label": label,
+        "message": message, "semantic_on": _sem_ready, "sections": sections,
     }
 
-# STATUS
+# status
 def _check_ollama() -> str:
     try:
         models = [m["name"] for m in ollama.list().get("models", [])]
@@ -2329,15 +1854,14 @@ def get_recommender_status() -> dict:
         "ollama_status":      _check_ollama(),
         "romance_index_size": len(_GENRE_INDEX.get("romance", [])),
     }
- 
+
+# rating weights
 def get_rating_weight(user_id: int, csv_book_id: int, db: Session) -> float:
-    # Resolve CSV book_id → Book DB primary key
     book_result = db.execute(
         select(Book.id).where(Book.book_id == csv_book_id)
     ).scalar_one_or_none()
     if not book_result:
-        return 1.0  # book not in DB — neutral
- 
+        return 1.0
     book_pk = book_result
     rating_entry = db.execute(
         select(Rating).where(
@@ -2349,7 +1873,7 @@ def get_rating_weight(user_id: int, csv_book_id: int, db: Session) -> float:
         return 1.0
     weight_map = {5: 1.5, 4: 1.2, 3: 1.0, 2: 0.6, 1: 0.3}
     return weight_map.get(rating_entry.rating, 1.0)
- 
+
 def get_all_user_rating_weights(user_id: int, db: Session) -> dict[int, float]:
     rows = db.execute(
         select(Book.book_id, Rating.rating)
@@ -2361,15 +1885,14 @@ def get_all_user_rating_weights(user_id: int, db: Session) -> dict[int, float]:
         int(row.book_id): weight_map.get(row.rating, 1.0)
         for row in rows
     }
+
 def apply_rating_weights(candidates: list, user_id: int, db: Session) -> list:
     if not candidates or not user_id:
         return candidates
     weights = get_all_user_rating_weights(user_id, db)
- 
     for item in candidates:
         csv_id = item.get("book_id")
         if csv_id is not None:
             item["score"] = item.get("score", 1.0) * weights.get(int(csv_id), 1.0)
- 
     candidates.sort(key=lambda x: x.get("score", 0), reverse=True)
     return candidates

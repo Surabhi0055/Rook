@@ -834,7 +834,7 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
   )
 }
 function SearchBar({ onSearch, onOpenBook, userName }) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState('') 
   const [acItems, setAcItems] = useState([])
   const [acOpen, setAcOpen] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
@@ -844,12 +844,7 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
   const glintRef = useRef(null)
   const timer = useRef(null)
   const { greeting } = useMemo(() => getTimeGreeting(userName), [])
-
-  const rotatingBooks = useMemo(() => [
-    'The Alchemist', 'Lord of the Rings', 'Pride and Prejudice',
-    'Harry Potter', 'And Then There Were None',
-  ], [])
-
+  const rotatingBooks = useMemo(() => ['The Alchemist', 'Lord of the Rings', 'Pride and Prejudice','Harry Potter', 'And Then There Were None',], [])
   // Close autocomplete on outside click
   useEffect(() => {
     const fn = e => {
@@ -858,7 +853,6 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
   }, [])
-
   // Rotate placeholder when input is empty
   useEffect(() => {
     if (query.trim()) return
@@ -867,7 +861,6 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
     }, 2200)
     return () => clearInterval(id)
   }, [query, rotatingBooks.length])
-
   function onInput(val) {
     setQuery(val)
     clearTimeout(timer.current)
@@ -882,9 +875,7 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
       } catch { setAcItems([]); setAcOpen(false) }
     }, 280)
   }
-
   function submit() { setAcOpen(false); if (query.trim()) onSearch(query.trim()) }
-
   // Glint follows cursor inside button
   function handleBtnMouseMove(e) {
     if (!btnRef.current || !glintRef.current) return
@@ -894,13 +885,10 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
     glintRef.current.style.left = x + '%'
     glintRef.current.style.top = y + '%'
   }
-
   function handleBtnMouseLeave() {
     if (glintRef.current) { glintRef.current.style.left = '30%'; glintRef.current.style.top = '30%' }
   }
-
   const dynamicPlaceholder = `Search "${rotatingBooks[placeholderIndex]}"`
-
   return (
     <div className="home-body">
       <div className="home-welcome-strip">
@@ -908,11 +896,8 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
           {greeting}, <span className="hw-name">{userName || 'Reader'}</span>
         </span>
       </div>
-
       <div className="home-search-center">
         <h2 className="home-tagline">Discover Your Next Great Read</h2>
-        <p className="home-tagline-sub">Search by title, author, genre or describe what you feel like reading</p>
-
         <div ref={wrapRef} style={{ position: 'relative', width: '100%', maxWidth: 1000, margin: '0 auto' }}>
           <div
             className="home-sw"
@@ -922,8 +907,7 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
                 ? '0 14px 34px rgba(0,0,0,0.28), 0 0 0 1px rgba(212,161,94,0.22)'
                 : '0 8px 20px rgba(0,0,0,0.16)',
               borderRadius: 999,
-            }}
-          >
+            }}>
             <input
               className="home-search"
               type="text"
@@ -936,17 +920,14 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
                 if (e.key === 'Enter') { setAcOpen(false); submit() }
                 if (e.key === 'Escape') setAcOpen(false)
               }}
-              autoComplete="off"
-            />
-
+              autoComplete="off"/>
             {/* Animated search button with cursor-tracking glint */}
             <button
               ref={btnRef}
               className="home-sbtn"
               onClick={submit}
               onMouseMove={handleBtnMouseMove}
-              onMouseLeave={handleBtnMouseLeave}
-            >
+              onMouseLeave={handleBtnMouseLeave}>
               <span ref={glintRef} className="sbtn-glint" />
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -955,7 +936,6 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
               </svg>
             </button>
           </div>
-
           {/* Autocomplete dropdown */}
           {acOpen && acItems.length > 0 && (
             <div style={{
@@ -975,8 +955,7 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
                       borderBottom: i < acItems.length - 1 ? '1px solid rgba(114,57,63,0.08)' : 'none',
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(114,57,63,0.07)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <div style={{ width: 36, height: 50, borderRadius: 4, overflow: 'hidden', flexShrink: 0, background: 'rgba(114,57,63,0.15)' }}>
                       {imgUrl && <img src={imgUrl} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />}
                     </div>
@@ -990,7 +969,6 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
             </div>
           )}
         </div>
-
         <div className="home-pills">
           {GENRE_PILLS.map(g => (
             <button key={g} className="pill" onClick={() => onSearch(g.toLowerCase())}>{g}</button>
