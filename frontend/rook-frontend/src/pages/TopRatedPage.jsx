@@ -325,7 +325,7 @@ export function TopRatedSection({ likedBooks = [], savedBooks = [], readBooks = 
 
   return (
     <div style={{ marginBottom: 40 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, padding: '0 38px' }}>
         <div style={{ flex: 1 }}>
           <p style={{ fontFamily: 'Montserrat Alternates,sans-serif', fontSize: 9.5, fontWeight: 700, color: accent, letterSpacing: '.22em', textTransform: 'uppercase', margin: '0 0 4px' }}>
             {eyebrow || (hasUserData ? 'Your Personal Chart' : 'Community Picks')}
