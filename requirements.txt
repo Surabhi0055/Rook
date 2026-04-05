@@ -26,3 +26,4 @@ cachetools
 multipart
 python-multipart
 email-validator
+aiosmtplib
