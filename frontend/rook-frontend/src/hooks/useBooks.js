@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export const API_BASE = '/api'
+export const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 /* ── generic fetch ───────────────────────────────────────────── */
 export async function apiFetch(url, options = {}) {

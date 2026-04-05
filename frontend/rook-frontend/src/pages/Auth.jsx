@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-const API = "/api";
+const API = import.meta.env.VITE_API_URL || "/api";
 const GOOGLE_CLIENT_ID = '482908299007-4kjj83gbr0o8h68v2ootmo5dra93b3ei.apps.googleusercontent.com'
 
 async function apiPost(path, body, token = null) {

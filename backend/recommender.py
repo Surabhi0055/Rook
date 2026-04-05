@@ -31,8 +31,11 @@ _GBOOKS_URL          = "https://www.googleapis.com/books/v1/volumes"
 _EMBED_MODEL        = "nomic-embed-text"
 _LLM_MODEL          = os.getenv("ROOK_LLM_MODEL", "llama3.2:3b")
 _LLM_MODEL_FALLBACK = "llama3.2:1b"
-_FAISS_INDEX_PATH   = "../models/book_faiss.index"
-_BOOK_META_PATH     = "../models/book_meta.pkl"
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJ_DIR = os.path.dirname(_BASE_DIR)
+
+_FAISS_INDEX_PATH   = os.path.join(_PROJ_DIR, "models", "book_faiss.index")
+_BOOK_META_PATH     = os.path.join(_PROJ_DIR, "models", "book_meta.pkl")
 
 _llm_query_cache: dict = {}
 _LLM_CACHE_MAX        = 200
@@ -44,11 +47,11 @@ _RL_ALPHA             = 0.30
 _FUSED_SOFT_POP_FLOOR = 20
 
 # data loading
-model      = joblib.load("../models/svd_model.pkl")
-cosine_sim = joblib.load("../models/cosine_sim.pkl")
+model      = joblib.load(os.path.join(_PROJ_DIR, "models", "svd_model.pkl"))
+cosine_sim = joblib.load(os.path.join(_PROJ_DIR, "models", "cosine_sim.pkl"))
 
-ratings = pd.read_csv("../dataset/ratings_processed.csv")
-books   = pd.read_csv("../dataset/books_genre.csv")
+ratings = pd.read_csv(os.path.join(_PROJ_DIR, "dataset", "ratings_processed.csv"))
+books   = pd.read_csv(os.path.join(_PROJ_DIR, "dataset", "books_genre.csv"))
 
 books = books[books["title"].apply(lambda x: isinstance(x, str) and bool(str(x).strip()))].copy()
 books = books.reset_index(drop=True)
