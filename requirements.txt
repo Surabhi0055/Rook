@@ -25,3 +25,4 @@ httpx
 cachetools
 multipart
 python-multipart
+email-validator
