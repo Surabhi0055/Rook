@@ -16,8 +16,8 @@ COPY . .
 # Set environment variable so the backend knows where it is
 ENV PYTHONPATH=/app/backend
 
-# The port is provided by Railway
-ENV PORT=8000
+# Hugging Face strictly exposes port 7860
+ENV PORT=7860
 
 # Start FastAPI exactly from the backend folder using uvicorn
 CMD uvicorn backend.main:app --host 0.0.0.0 --port $PORT
