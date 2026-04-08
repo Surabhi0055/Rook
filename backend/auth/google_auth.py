@@ -8,16 +8,15 @@ load_dotenv()
 if not os.getenv("GOOGLE_CLIENT_ID"):
     load_dotenv("config.env")
 
-def verify_google_token(token: str) -> dict | None:
-   
+def verify_google_token(token: str) -> dict:
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     if not client_id:
-        raise RuntimeError(
-            "GOOGLE_CLIENT_ID is not set in your .env file."
-        )
-    
-    # DEBUG: Log the first few chars of client_id to verify config on HF
-    print(f"[google_auth] Using client_id: {client_id[:10]}...")
+        # Fallback check
+        load_dotenv("config.env")
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        
+    if not client_id:
+        raise ValueError("GOOGLE_CLIENT_ID not found in environment.")
 
     try:
         idinfo = id_token.verify_oauth2_token(
@@ -25,21 +24,15 @@ def verify_google_token(token: str) -> dict | None:
             google_requests.Request(),
             client_id,
         )
-    except ValueError as e:
-       
-        print(f"[google_auth] Token validation failed: {e}")
-        return None
+        
+        if idinfo.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+            raise ValueError(f"Invalid token issuer: {idinfo.get('iss')}")
+            
+        if idinfo.get("aud") != client_id:
+            raise ValueError(f"Audience mismatch: expected {client_id}, got {idinfo.get('aud')}")
+            
+        return idinfo
+        
     except Exception as e:
-       
-        print(f"[google_auth] Unexpected error verifying token: {e}")
-        return None
-
-    if idinfo.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
-        print(f"[google_auth] Invalid token issuer: {idinfo.get('iss')}")
-        return None
-
-    if idinfo.get("aud") != client_id:
-        print(f"[google_auth] Token audience mismatch: expected {client_id}, got {idinfo.get('aud')}")
-        return None
-
-    return idinfo
+        print(f"[google_auth] Verification failed: {str(e)}")
+        raise ValueError(str(e))
