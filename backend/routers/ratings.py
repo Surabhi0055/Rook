@@ -107,20 +107,25 @@ async def rate_book(
             db.add(rating_obj)
 
         await db.commit()
-        await db.refresh(rating_obj)
-
+        
+        # We don't necessarily need refresh if we just want to return the data we have
+        # rating_obj.id is usually available after commit in most async drivers
+        
         return {
-            "id": rating_obj.id,
-            "user_id": rating_obj.user_id,
-            "book_id": book.id,              # DB ID
-            "csv_book_id": book.book_id,     # CSV ID
-            "rating": rating_obj.rating,
+            "id": int(rating_obj.id) if rating_obj.id else 0,
+            "user_id": int(rating_obj.user_id),
+            "book_id": int(book.id),
+            "csv_book_id": int(book.book_id) if book.book_id else None,
+            "rating": int(rating_obj.rating),
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
+        await db.rollback()
         import traceback
         traceback.print_exc()   
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 # ─────────────────────────────────────────────────────────────────────────────
 # GET /ratings/{book_id}  → Average rating + total count
 # book_id is the CSV/Goodreads book_id (what the frontend sends)
