@@ -5,6 +5,8 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
 load_dotenv()
+if not os.getenv("GOOGLE_CLIENT_ID"):
+    load_dotenv("config.env")
 
 def verify_google_token(token: str) -> dict | None:
    
