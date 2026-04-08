@@ -125,10 +125,13 @@ class GoogleLoginRequest(BaseModel):
 
 @router.post("/google", response_model=schemas.TokenResponse)
 async def google_login(body: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
-
-    user_info = verify_google_token(body.id_token)
-    if not user_info:
-        raise HTTPException(status_code=400, detail="Invalid or expired Google token")
+    try:
+        user_info = verify_google_token(body.id_token)
+    except ValueError as e:
+        # Pass the detailed error back to frontend
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error during Google auth")
 
     email = user_info.get("email")
     name  = user_info.get("name", "")
