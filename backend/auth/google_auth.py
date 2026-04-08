@@ -8,7 +8,7 @@ load_dotenv()
 
 def verify_google_token(token: str) -> dict | None:
    
-    client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
     if not client_id:
         raise RuntimeError(
             "GOOGLE_CLIENT_ID is not set in your .env file."
