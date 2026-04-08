@@ -18,6 +18,9 @@ def verify_google_token(token: str) -> dict:
     if not client_id:
         raise ValueError("GOOGLE_CLIENT_ID not found in environment.")
 
+    # STRICT TRIM: Remove any potential surrounding quotes or spaces
+    client_id = client_id.strip().strip("'").strip('"')
+
     try:
         idinfo = id_token.verify_oauth2_token(
             token,
