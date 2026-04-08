@@ -8,11 +8,13 @@ load_dotenv()
 _raw_url: str = os.getenv("DATABASE_URL", "")
 
 if not _raw_url:
-    raise RuntimeError(
-        "DATABASE_URL is not set in your .env file.\n"
-        "Example for SQLite:     DATABASE_URL=sqlite+aiosqlite:///./rook.db\n"
-        "Example for PostgreSQL: DATABASE_URL=postgresql://user:pass@localhost/rook"
-    )
+    # Use config.env if root .env was ignored
+    load_dotenv("config.env")
+    _raw_url = os.getenv("DATABASE_URL", "")
+
+if not _raw_url:
+    # Final production fallback
+    _raw_url = "sqlite+aiosqlite:///./rook.db"
 
 # ── Normalise driver prefix ───────────────────────────────────────────────────
 if _raw_url.startswith("postgresql://"):
