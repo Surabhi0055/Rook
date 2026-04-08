@@ -5,7 +5,7 @@ from sqlalchemy.orm import declarative_base
 
 load_dotenv()
 
-_raw_url: str = os.getenv("DATABASE_URL", "")
+_raw_url: str = os.getenv("DATABASE_URL", "").strip()
 
 if not _raw_url:
     raise RuntimeError(
