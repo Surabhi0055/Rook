@@ -27,4 +27,3 @@ multipart
 python-multipart
 email-validator
 aiosmtplib
-bcrypt==3.2.0
