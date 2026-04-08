@@ -52,3 +52,11 @@ app.include_router(songs.router, prefix="/api")
 @app.get("/")
 def root():
     return {"status": "ok", "docs": "/docs"}
+import traceback
+from fastapi import Request
+from fastapi.responses import JSONResponse
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    error_trace = traceback.format_exc()
+    print("GLOBAL ERROR:", error_trace)
+    return JSONResponse(status_code=500, content={"message": str(exc), "trace": error_trace})
