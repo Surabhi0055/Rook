@@ -26,4 +26,5 @@ cachetools
 multipart
 python-multipart
 email-validator
-aiosmtplibbcrypt==3.2.0
+aiosmtplib
+bcrypt==3.2.0
