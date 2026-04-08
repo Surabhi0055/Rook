@@ -16,7 +16,7 @@ class BookShort(BaseModel):
 
     model_config = {"from_attributes": True}
 class BookCreate(BaseModel):
-    book_id:          int
+    book_id:          Optional[int] = None
     title:            str
     authors:          Optional[str]  = None
     genre:            Optional[str]  = None
@@ -46,13 +46,6 @@ class RegisterRequest(BaseModel):
         None,
         description="Integer user_id from ratings_processed.csv — enables SVD filtering"
     )
-
-    @field_validator("email", mode="before")
-    @classmethod
-    def empty_string_to_none(cls, v: Any) -> Any:
-        if v == "":
-            return None
-        return v
 class LoginRequest(BaseModel):
     identifier: str = Field(..., description="Username or email address")
     password:   str = Field(..., min_length=1)
@@ -201,7 +194,7 @@ class RatingResponse(BaseModel):
     id: int
     user_id: int
     book_id: int
-    csv_book_id: int
+    csv_book_id: Optional[int] = None
     rating: int
 
     model_config = {"from_attributes": True}

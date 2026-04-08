@@ -10,12 +10,20 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/ratings", tags=["ratings"])
 
+import hashlib
+
 class RateBookRequest(BaseModel):
-    book_id: int
+    book_id: Optional[int] = None
     title: Optional[str] = None
     authors: Optional[str] = None
     image_url: Optional[str] = None
     rating: int
+
+def generate_book_id(title: str) -> int:
+    """Generate a pseudo-random integer ID based on title hash (positive int32 range)."""
+    h = hashlib.sha256(title.encode('utf-8')).hexdigest()
+    # Take first 7 chars of hash to stay in a reasonable positive integer range
+    return int(h[:7], 16)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # POST /ratings/rate  → Add or Update a rating (upsert)
@@ -30,24 +38,45 @@ async def rate_book(
         if not (1 <= rating_data.rating <= 5):
             raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
 
-        # Find book using CSV book_id
-        result = await db.execute(
-            select(Book).where(Book.book_id == rating_data.book_id)
-        )
-        book = result.scalar_one_or_none()
-
-        # Fallback: treat as DB id
-        if not book:
+        book = None
+        # 1. Try finding by CSV book_id if provided
+        if rating_data.book_id:
             result = await db.execute(
-                select(Book).where(Book.id == rating_data.book_id)
+                select(Book).where(Book.book_id == rating_data.book_id)
             )
             book = result.scalar_one_or_none()
 
-        #  Create book if not exists
+            # 2. Try as DB secondary PK (id) if not found by CSV ID
+            if not book:
+                result = await db.execute(
+                    select(Book).where(Book.id == rating_data.book_id)
+                )
+                book = result.scalar_one_or_none()
+
+        # 3. Try finding by title if still no book
+        if not book and rating_data.title:
+            result = await db.execute(
+                select(Book).where(Book.title == rating_data.title)
+            )
+            book = result.scalar_one_or_none()
+
+        # 4. Create book if not exists
         if not book:
+            # We NEED a title to create/generate an ID
+            if not rating_data.title:
+                raise HTTPException(status_code=400, detail="Title is required if book_id is missing or not found")
+            
+            # Use provided book_id or generate one
+            final_book_id = rating_data.book_id or generate_book_id(rating_data.title)
+            
+            # Ensure final_book_id is unique (rare collision case for hashes)
+            check_exist = await db.execute(select(Book).where(Book.book_id == final_book_id))
+            if check_exist.scalar_one_or_none():
+                 final_book_id += 1 
+
             book = Book(
-                book_id=rating_data.book_id,
-                title=rating_data.title or f"Book {rating_data.book_id}",
+                book_id=final_book_id,
+                title=rating_data.title,
                 authors=rating_data.authors,
                 image_url=rating_data.image_url,
                 average_rating=0.0,

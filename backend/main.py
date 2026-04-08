@@ -1,7 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-import traceback
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from database import engine, Base
@@ -10,7 +8,6 @@ from routers import users, books, recommendation, ratings
 from routers import songs  
 import os
 from pathlib import Path
-from fastapi.exceptions import RequestValidationError
 
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -51,21 +48,6 @@ app.include_router(books.router, prefix="/api")
 app.include_router(recommendation.router, prefix="/api")
 app.include_router(ratings.router, prefix="/api")
 app.include_router(songs.router, prefix="/api")
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    error_trace = traceback.format_exc()
-    print("GLOBAL ERROR:", error_trace)
-    return JSONResponse(status_code=500, content={"message": str(exc), "trace": error_trace})
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    error_log = f"VALIDATION ERROR for {request.url}: {exc.errors()}"
-    print(error_log)
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors(), "body": exc.body}
-    )
 
 @app.get("/")
 def root():

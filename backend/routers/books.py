@@ -157,27 +157,37 @@ async def add_or_get_book(
     body: schemas.BookCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    # Try finding by CSV book_id first (BEST)
+    # 1. Try finding by CSV book_id first (BEST)
     if body.book_id:
         result = await db.execute(
             select(models.Book).where(models.Book.book_id == body.book_id)
         )
         existing = result.scalar_one_or_none()
-
         if existing:
             return existing
 
-    # Fallback: match by title
+    # 2. Fallback: match by title
     result = await db.execute(
         select(models.Book).where(models.Book.title == body.title)
     )
     existing = result.scalar_one_or_none()
-
     if existing:
         return existing
 
-    # Create new book
-    new_book = models.Book(**body.model_dump())
+    # 3. Create new book
+    data = body.model_dump()
+    if not data.get("book_id") and body.title:
+        # Simple hash-based ID to satisfy NOT NULL if missing
+        import hashlib
+        h = hashlib.sha256(body.title.encode('utf-8')).hexdigest()
+        data["book_id"] = int(h[:7], 16)
+        
+        # Check for collision
+        collision = await db.execute(select(models.Book).where(models.Book.book_id == data["book_id"]))
+        if collision.scalar_one_or_none():
+            data["book_id"] += 1
+
+    new_book = models.Book(**data)
     db.add(new_book)
     await db.commit()
     await db.refresh(new_book)
