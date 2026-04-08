@@ -46,6 +46,13 @@ class RegisterRequest(BaseModel):
         None,
         description="Integer user_id from ratings_processed.csv — enables SVD filtering"
     )
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, v: Any) -> Any:
+        if v == "":
+            return None
+        return v
 class LoginRequest(BaseModel):
     identifier: str = Field(..., description="Username or email address")
     password:   str = Field(..., min_length=1)
