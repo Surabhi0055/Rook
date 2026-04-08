@@ -1,0 +1,3 @@
+# Netlify Redirects for ROOK
+/api/*  https://surabhibh05-rook.hf.space/api/:splat  200
+/*      /index.html                                  200

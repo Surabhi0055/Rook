@@ -16,7 +16,7 @@ class BookShort(BaseModel):
 
     model_config = {"from_attributes": True}
 class BookCreate(BaseModel):
-    book_id:          int
+    book_id:          Optional[int] = None
     title:            str
     authors:          Optional[str]  = None
     genre:            Optional[str]  = None
@@ -194,7 +194,7 @@ class RatingResponse(BaseModel):
     id: int
     user_id: int
     book_id: int
-    csv_book_id: int
+    csv_book_id: Optional[int] = None
     rating: int
 
     model_config = {"from_attributes": True}

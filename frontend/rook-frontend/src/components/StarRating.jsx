@@ -73,6 +73,8 @@ function StarRating({
   bookId,
   bookCsvId,
   bookTitle,
+  bookAuthors,
+  bookImage,
   userId: userIdProp,
   onRatingChange,
 }) {
@@ -104,26 +106,11 @@ function StarRating({
       if (bookId) setResolvedId(Number(bookId));
       return;
     }
-    const key = bookTitle.toLowerCase().trim();
-    if (_titleIdCache.has(key)) {
-      const cached = _titleIdCache.get(key);
-      setResolvedId(cached);
-      if (cached) {
-        const s = getLocalRating(cached);
-        if (s > 0) setUserRating(s);
-      }
-      return;
-    }
+    
     setResolving(true);
-    resolveBookIdByTitle(bookTitle)
-      .then((id) => {
-        setResolvedId(id);
-        if (id) {
-          const s = getLocalRating(id);
-          if (s > 0) setUserRating(s);
-        }
-      })
-      .finally(() => setResolving(false));
+    // Backend handles title-based lookup now, so we don't need to resolve upfront
+    setResolvedId(null);
+    setResolving(false);
   }, [bookId, bookCsvId, bookTitle]);
 
   // Fetch community stats
@@ -137,40 +124,54 @@ function StarRating({
       })
       .catch(() => {});
   }, [resolvedId]);
+
   const handleStarClick = async (starValue) => {
     if (!userId) {
       setMessage("Log in to rate");
       return;
     }
     setUserRating(starValue);
-    const id = bookCsvId || resolvedId;
+    
+    // Local persistence fallback
+    const id = bookCsvId || resolvedId || bookTitle;
     if (id) saveRatingLocally(id, starValue);
+    
     setSubmitting(true);
     setMessage("");
+    
     try {
-      await ensureBook({
-        book_id: bookCsvId,
-        title: bookTitle,
-      });
+      // Logic updated: we no longer call ensureBook separately. 
+      // rateBook now handles book creation using the metadata.
       const ratingResponse = await rateBook({
-        book_id: bookCsvId,
+        book_id: bookCsvId || resolvedId,
         rating: starValue,
+        title: bookTitle,
+        authors: bookAuthors,
+        image_url: bookImage,
       });
+      
       setJustRated(true);
       setMessage(`Saved ${starValue}★`);
-      const stats = await getBookRatings(bookCsvId);
-      if (stats) {
-        setAvgRating(stats.average_rating || 0);
-        setTotalRatings(stats.total_ratings || 0);
+      
+      const statsId = bookCsvId || resolvedId || ratingResponse.csv_book_id;
+      if (statsId) {
+        getBookRatings(statsId).then(s => {
+          if (s) {
+            setAvgRating(s.average_rating || 0);
+            setTotalRatings(s.total_ratings || 0);
+          }
+        }).catch(() => {});
       }
+      
       if (onRatingChange) onRatingChange(starValue);
       setTimeout(() => {
         setMessage("");
         setJustRated(false);
-      }, 2000);
+      }, 3000);
     } catch (err) {
       console.error("Rating error:", err);
-      setMessage("Failed. Try again.");
+      // Detailed error from backend if available
+      setMessage(err.message || "Failed. Try again.");
     } finally {
       setSubmitting(false);
     }

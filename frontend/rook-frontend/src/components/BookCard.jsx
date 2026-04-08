@@ -792,6 +792,8 @@ export function BookModal({
                   bookCsvId={book.book_id}
                   bookId={book.id}
                   bookTitle={book.title}
+                  bookAuthors={book.authors}
+                  bookImage={book.image_url}
                   userId={userId}
                   onRatingChange={(r) => console.log("Rated:", r)}
                 />
