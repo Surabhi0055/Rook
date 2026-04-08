@@ -8,30 +8,28 @@ load_dotenv()
 if not os.getenv("GOOGLE_CLIENT_ID"):
     load_dotenv("config.env")
 
-def verify_google_token(token: str) -> dict:
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    if not client_id:
-        # Final robust fallback for production issues
-        client_id = "482908299007-4kjj83gbr0o8h68v2ootmo5dra93b3ei.apps.googleusercontent.com"
-        
-    # STRICT TRIM: Remove any potential surrounding quotes or spaces
-    client_id = client_id.strip().strip("'").strip('"')
+GOOGLE_CLIENT_ID = "482908299007-4kjj83gbr0o8h68v2ootmo5dra93b3ei.apps.googleusercontent.com"
 
+def verify_google_token(token: str) -> dict:
+    """
+    Verifies a Google ID token and returns the user info.
+    Raises ValueError on any failure.
+    """
     try:
+        # Use the hardcoded ID directly to avoid any environment issues
         idinfo = id_token.verify_oauth2_token(
             token,
             google_requests.Request(),
-            client_id,
+            GOOGLE_CLIENT_ID,
         )
         
+        # Verify issuer
         if idinfo.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
             raise ValueError(f"Invalid token issuer: {idinfo.get('iss')}")
-            
-        if idinfo.get("aud") != client_id:
-            raise ValueError(f"Audience mismatch: expected {client_id}, got {idinfo.get('aud')}")
             
         return idinfo
         
     except Exception as e:
+        # Pass the detailed error from the library through
         print(f"[google_auth] Verification failed: {str(e)}")
         raise ValueError(str(e))
