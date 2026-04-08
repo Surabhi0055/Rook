@@ -13,6 +13,9 @@ def verify_google_token(token: str) -> dict | None:
         raise RuntimeError(
             "GOOGLE_CLIENT_ID is not set in your .env file."
         )
+    
+    # DEBUG: Log the first few chars of client_id to verify config on HF
+    print(f"[google_auth] Using client_id: {client_id[:10]}...")
 
     try:
         idinfo = id_token.verify_oauth2_token(
