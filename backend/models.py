@@ -105,6 +105,8 @@ class Book(Base):
                                        cascade="all, delete-orphan", lazy="select")
     ratings = relationship("Rating", back_populates="book",
                            cascade="all, delete-orphan", lazy="select")
+    recommendation_logs = relationship("RecommendationLog", back_populates="book",
+                                       cascade="all, delete-orphan", lazy="select")
 
 
     def __repr__(self) -> str:
