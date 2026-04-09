@@ -106,21 +106,25 @@ async def rate_book(
             )
             db.add(rating_obj)
 
-        await db.commit()
-        await db.refresh(rating_obj)
-
-        return {
-            "id": rating_obj.id,
-            "user_id": rating_obj.user_id,
-            "book_id": book.id,              # DB ID
-            "csv_book_id": book.book_id,     # CSV ID
-            "rating": rating_obj.rating,
+        # Capture all needed data BEFORE commit to prevent DetachedInstanceError
+        response_data = {
+            "id": int(rating_obj.id) if (hasattr(rating_obj, 'id') and rating_obj.id) else 0,
+            "user_id": int(current_user.id),
+            "book_id": int(book.id),
+            "csv_book_id": int(book.book_id) if book.book_id else None,
+            "rating": int(rating_obj.rating),
         }
+
+        await db.commit()
+        return response_data
     
+    except HTTPException:
+        raise
     except Exception as e:
+        await db.rollback()
         import traceback
         traceback.print_exc()   
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 # ─────────────────────────────────────────────────────────────────────────────
 # GET /ratings/{book_id}  → Average rating + total count
 # book_id is the CSV/Goodreads book_id (what the frontend sends)

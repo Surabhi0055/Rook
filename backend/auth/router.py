@@ -125,71 +125,80 @@ class GoogleLoginRequest(BaseModel):
 
 @router.post("/google", response_model=schemas.TokenResponse)
 async def google_login(body: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
-
-    user_info = verify_google_token(body.id_token)
-    if not user_info:
-        raise HTTPException(status_code=400, detail="Invalid or expired Google token")
+    try:
+        user_info = verify_google_token(body.id_token)
+    except ValueError as e:
+        # Pass the detailed error back to frontend (e.g. invalid audience, expired)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        # Return generic auth error but log the specific system error
+        print(f"[auth] Google verify system error: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Google authentication service unavailable")
 
     email = user_info.get("email")
     name  = user_info.get("name", "")
+    picture = user_info.get("picture", "")
 
     if not email:
-        raise HTTPException(status_code=400, detail="Google account has no email address")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google account has no email address")
 
-    # Find existing user by email, or create a new one
-    result = await db.execute(
-        select(models.User).where(models.User.email == email)
-    )
-    user = result.scalar_one_or_none()
+    # DB Logic
+    try:
+        result = await db.execute(select(models.User).where(models.User.email == email))
+        user = result.scalar_one_or_none()
 
-    is_new_user = False
-    if not user:
-        is_new_user = True
+        is_new_user = False
+        if not user:
+            is_new_user = True
+            base = email.split("@")[0].replace(".", "_")[:40]
+            username = base
+            suffix = 1
+            while True:
+                clash = await db.execute(select(models.User).where(models.User.username == username))
+                if not clash.scalar_one_or_none():
+                    break
+                username = f"{base}_{suffix}"
+                suffix += 1
 
-        # Derive a unique username from the email prefix
-        base     = email.split("@")[0].replace(".", "_")[:40]
-        username = base
-        suffix   = 1
-        while True:
-            clash = await db.execute(
-                select(models.User).where(models.User.username == username)
+            user = models.User(
+                username=username,
+                email=email,
+                display_name=name or username,
+                image_url=picture,
+                hashed_password="", # OAuth placeholder
+                is_active=True,
             )
-            if not clash.scalar_one_or_none():
-                break
-            username = f"{base}_{suffix}"
-            suffix  += 1
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
 
-        user = models.User(
-            username=username,
-            email=email,
-            display_name=name or username,
-            hashed_password="",   # no password for OAuth-only accounts
-            is_active=True,
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        # TOKEN CREATION
+        try:
+            access  = create_access_token(user.id)
+            refresh = create_refresh_token(user.id)
 
-    access  = create_access_token(user.id)
-    refresh = create_refresh_token(user.id)
+            db.add(models.RefreshToken(
+                user_id=user.id,
+                token=refresh,
+                expires_at=datetime.fromtimestamp(
+                    decode_token(refresh)["exp"], tz=timezone.utc
+                )
+            ))
+            await db.commit()
+        except Exception as e:
+            print(f"[auth] JWT Generation failed: {str(e)}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to issue security tokens")
 
-    db.add(models.RefreshToken(
-        user_id=user.id,
-        token=refresh,
-        expires_at=datetime.fromtimestamp(
-            decode_token(refresh)["exp"], tz=timezone.utc
-        )
-    ))
-    await db.commit()
-
-    # is_new_user lets the frontend show "Welcome!" vs "Welcome back!"
-    return {
-        "access_token":  access,
-        "refresh_token": refresh,
-        "token_type":    "bearer",
-        "user":          schemas.UserResponse.model_validate(user),
-        "is_new_user":   is_new_user,
-    }
+        return {
+            "access_token":  access,
+            "refresh_token": refresh,
+            "token_type":    "bearer",
+            "user":          schemas.UserResponse.model_validate(user),
+            "is_new_user":   is_new_user,
+        }
+    except Exception as e:
+        print(f"[auth] Database error during Google login: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error during authentication")
 # ─────────────────────────────────────────────
 # REFRESH TOKEN
 # ─────────────────────────────────────────────

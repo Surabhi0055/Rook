@@ -170,8 +170,14 @@ function StarRating({
       }, 3000);
     } catch (err) {
       console.error("Rating error:", err);
+      setJustRated(false);
       // Detailed error from backend if available
-      setMessage(err.message || "Failed. Try again.");
+      const errMsg = err.message || "Failed. Try again.";
+      setMessage(errMsg);
+      // Clear error after a longer delay (5s) so user can see it
+      setTimeout(() => {
+        setMessage((prev) => (prev === errMsg ? "" : prev));
+      }, 5000);
     } finally {
       setSubmitting(false);
     }

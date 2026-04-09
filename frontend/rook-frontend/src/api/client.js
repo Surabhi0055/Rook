@@ -1,4 +1,5 @@
-const BASE = "/api";
+const BASE_URL = import.meta.env.VITE_API_URL || "";
+const BASE = `${BASE_URL}/api`;
 
 // Auth Headers
 // Handles JWT token attachment for API requests
@@ -143,5 +144,5 @@ export const getUser = (userId) =>
   get(`/users/${userId}`);
 
 // AUTH
-export const googleLogin = (token) =>
-  post(`/auth/google`, { token });
+export const googleLogin = (id_token) =>
+  post(`/auth/google`, { id_token });

@@ -18,11 +18,12 @@ load_dotenv()
 # CONFIG
 # ─────────────────────────────────────────────
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM  = os.getenv("JWT_ALGORITHM", "HS256")  
+# Clean up environment variables to remove any hidden newlines or spaces
+SECRET_KEY = str(os.getenv("JWT_SECRET_KEY") or "3e584f23e429738c82d92167732a6889eb205f0370fabb3f905540447385a498").strip()
+ALGORITHM  = "HS256"  # Hardcoded to bypass environment corruption (HS256\n)
 
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "0") or "0")
-REFRESH_TOKEN_EXPIRE_DAYS   = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS",   "0") or "0")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(str(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES") or "10080").strip())
+REFRESH_TOKEN_EXPIRE_DAYS   = int(str(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS") or "30").strip())
 
 
 if not SECRET_KEY:

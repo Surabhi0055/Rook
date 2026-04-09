@@ -84,63 +84,60 @@ function GoogleSignInButton({ onCredential, onError, isLight }) {
         if (attemptsRef.current < 50) {
           timerRef.current = setTimeout(tryInit, 200)
         } else {
-          onError?.('Google Sign-In script failed to load. Check your internet connection.')
+          onError?.('Google Sign-In script failed to load. Check your connection.')
         }
         return
       }
-      // Container not in DOM yet — wait for next paint
+      
       if (!containerRef.current) {
         timerRef.current = setTimeout(tryInit, 100)
         return
       }
 
-      window.google.accounts.id.initialize({
-        client_id:            GOOGLE_CLIENT_ID,
-        callback:             handleCredentialResponse,
-        auto_select:          false,
-        cancel_on_tap_outside: true,
-        ux_mode:              'popup',
-        context:              'signin',
-      })
+      try {
+        window.google.accounts.id.initialize({
+          client_id:            GOOGLE_CLIENT_ID,
+          callback:             handleCredentialResponse,
+          ux_mode:              'popup',
+          cancel_on_tap_outside: true,
+        })
 
-      const w = containerRef.current.offsetWidth
-      window.google.accounts.id.renderButton(containerRef.current, {
-        type:           'standard',
-        theme:          isLight ? 'outline' : 'filled_black',
-        size:           'large',
-        text:           'continue_with',
-        shape:          'pill',
-        logo_alignment: 'left',
-        width:          w > 100 ? w : 352,  
-      })
+        const w = containerRef.current.offsetWidth
+        window.google.accounts.id.renderButton(containerRef.current, {
+          theme:          isLight ? 'outline' : 'filled_black',
+          size:           'large',
+          shape:          'pill',
+          width:          w > 100 ? w : 352,
+        })
+      } catch (err) {
+        console.warn("GSI rendering error:", err)
+      }
     }
-    timerRef.current = setTimeout(tryInit, 150)
+
+    tryInit()
     return () => {
       clearTimeout(timerRef.current)
     }
-  }, [isLight])  
+  }, [isLight])
+
   async function handleCredentialResponse(response) {
     if (!response?.credential) {
-      console.error('[Google] No credential in response:', response)
-      onError?.('Google sign-in failed — no credential received.')
+      onError?.('Google login failed — no credential received.')
       return
     }
     console.log('[Google] Credential received, posting to backend...')
     try {
       const { ok, data } = await apiPost('/auth/google', { id_token: response.credential })
-
       if (!ok) {
         console.error('[Google] Backend rejected token:', data)
         onError?.(data?.detail || 'Google login failed. Please try again.')
         return
       }
-
       console.log('[Google] Login success:', data.user?.username)
       onCredential(data)
-
     } catch (err) {
-      console.error('[Google] Network error posting to backend:', err)
-      onError?.('Could not connect to server. Is the backend running?')
+      console.error('[Google] Network error:', err)
+      onError?.('Could not connect to server.')
     }
   }
 
