@@ -5,7 +5,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, ExpiredSignatureError, jwt
+import jwt
+from jwt.exceptions import ExpiredSignatureError, PyJWTError
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -98,7 +99,7 @@ def decode_token(token: str, expected_type: Optional[str] = None) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token expired",
         )
-    except JWTError:
+    except PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",

@@ -10,7 +10,7 @@ sqlalchemy
 aiosqlite
 asyncpg
 passlib[bcrypt]
-python-jose[cryptography]
+PyJWT>=2.8.0
 python-dotenv
 sentence-transformers
 faiss-cpu
