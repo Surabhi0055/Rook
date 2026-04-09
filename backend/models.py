@@ -36,13 +36,7 @@ class User(Base):
     updated_at       = Column(DateTime, nullable=False, default=datetime.utcnow,
                               onupdate=datetime.utcnow)
 
-    ratings = relationship(
-        "UserRating",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        lazy="select"
-    )
-    reviews = relationship(        
+    ratings = relationship(        
         "Rating",
         back_populates="user",
         cascade="all, delete-orphan",
@@ -109,11 +103,8 @@ class Book(Base):
                                        cascade="all, delete-orphan", lazy="select")
     liked_by            = relationship("UserLikedBook",     back_populates="book",
                                        cascade="all, delete-orphan", lazy="select")
-    user_ratings        = relationship("UserRating",        back_populates="book",
-                                       cascade="all, delete-orphan", lazy="select")
-    recommendation_logs = relationship("RecommendationLog", back_populates="book",
-                                       cascade="all, delete-orphan", lazy="select")
-    reviews             = relationship("Rating", back_populates="book")        
+    ratings = relationship("Rating", back_populates="book",
+                           cascade="all, delete-orphan", lazy="select")
 
 
     def __repr__(self) -> str:
@@ -176,29 +167,7 @@ class UserLikedBook(Base):
 #  USER_RATINGS
 # ══════════════════════════════════════════════════════════════════════════════
 
-class UserRating(Base):
-    
-    __tablename__ = "user_ratings"
-
-    id         = Column(Integer,  primary_key=True, autoincrement=True)
-    user_id    = Column(Integer,  ForeignKey("users.id", ondelete="CASCADE"),
-                        nullable=False, index=True)
-    book_id    = Column(Integer,  ForeignKey("books.id", ondelete="CASCADE"),
-                        nullable=False, index=True)
-    rating     = Column(Float,    nullable=False)   # 1.0 – 5.0
-    rated_at   = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow,
-                        onupdate=datetime.utcnow)
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "book_id", name="uq_rating_user_book"),
-    )
-
-    user = relationship("User", back_populates="ratings")
-    book = relationship("Book", back_populates="user_ratings")
-
-    def __repr__(self) -> str:
-        return f"<UserRating user={self.user_id} book={self.book_id} rating={self.rating}>"
+# (UserRating removed — merged into Rating below)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -301,15 +270,15 @@ class Rating(Base):
     __tablename__ = "ratings"
  
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    book_id = Column(Integer, ForeignKey("books.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    book_id = Column(Integer, ForeignKey("books.id", ondelete="CASCADE"), nullable=False)
     rating = Column(Integer, nullable=False)          # value: 1 to 5
     review = Column(Text, nullable=True)              # optional text review
-    timestamp = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    rated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
  
-    # Relationships (so you can do rating.user or rating.book)
-    user = relationship("User", back_populates="reviews")
-    book = relationship("Book", back_populates="reviews")
+    # Relationships
+    user = relationship("User", back_populates="ratings")
+    book = relationship("Book", back_populates="ratings")
  
     # UNIQUE CONSTRAINT: one user → one rating per book
     __table_args__ = (
