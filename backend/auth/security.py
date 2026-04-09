@@ -47,19 +47,30 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security    = HTTPBearer()
 
 
+import bcrypt
+
 # ─────────────────────────────────────────────
 # PASSWORD
 # ─────────────────────────────────────────────
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = bcrypt.gensalt()
+    pwd_bytes = password.encode('utf-8')
+    hashed = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-   
     if not hashed:
         return False
-    return pwd_context.verify(plain, hashed)
+    # Backward compatibility: ensure it handles bytes
+    plain_bytes = plain.encode('utf-8')
+    hashed_bytes = hashed.encode('utf-8')
+    try:
+        return bcrypt.checkpw(plain_bytes, hashed_bytes)
+    except Exception:
+        return False
+
 
 
 # ─────────────────────────────────────────────
