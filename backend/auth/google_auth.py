@@ -5,22 +5,22 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
 load_dotenv()
-if not os.getenv("GOOGLE_CLIENT_ID"):
-    load_dotenv("config.env")
-
-GOOGLE_CLIENT_ID = "482908299007-4kjj83gbr0o8h68v2ootmo5dra93b3ei.apps.googleusercontent.com"
+# Aggressively strip the ID to remove any hidden newlines injected by the environment
+_RAW_ID = "482908299007-4kjj83gbr0o8h68v2ootmo5dra93b3ei.apps.googleusercontent.com"
+GOOGLE_CLIENT_ID = _RAW_ID.strip()
 
 def verify_google_token(token: str) -> dict:
     """
     Verifies a Google ID token and returns the user info.
-    Raises ValueError on any failure.
+    Includes specific handling for common failure modes.
     """
     try:
-        # Use the hardcoded ID directly to avoid any environment issues
+        # Standard library verification (handles audience and expiration)
         idinfo = id_token.verify_oauth2_token(
             token,
             google_requests.Request(),
-            GOOGLE_CLIENT_ID,
+            audience=GOOGLE_CLIENT_ID,
+            clock_skew_in_seconds=120  # Allow 120 seconds of clock drift to handle production server desync
         )
         
         # Verify issuer
@@ -29,7 +29,15 @@ def verify_google_token(token: str) -> dict:
             
         return idinfo
         
+    except ValueError as e:
+        # Catch specific audience or issuer errors
+        msg = f"Google Token Validation Error: {str(e)}"
+        print(f"DEBUG: {msg}")
+        raise ValueError(msg)
     except Exception as e:
-        # Pass the detailed error from the library through
-        print(f"[google_auth] Verification failed: {str(e)}")
-        raise ValueError(str(e))
+        # Catch expiration and other library errors
+        msg = str(e)
+        if "Token expired" in msg:
+            raise ValueError("Google login session expired. Please sign in again.")
+        print(f"[google_auth] Unexpected verification failure: {msg}")
+        raise ValueError(f"Google Auth Failed: {msg}")

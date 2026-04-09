@@ -5,7 +5,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, ExpiredSignatureError, jwt
+import jwt
+from jwt.exceptions import ExpiredSignatureError, PyJWTError
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,11 +19,12 @@ load_dotenv()
 # CONFIG
 # ─────────────────────────────────────────────
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-ALGORITHM  = os.getenv("JWT_ALGORITHM", "HS256")  
+# Clean up environment variables to remove any hidden newlines or spaces
+SECRET_KEY = str(os.getenv("JWT_SECRET_KEY") or "3e584f23e429738c82d92167732a6889eb205f0370fabb3f905540447385a498").strip()
+ALGORITHM  = "HS256"  # Hardcoded to bypass environment corruption (HS256\n)
 
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "0") or "0")
-REFRESH_TOKEN_EXPIRE_DAYS   = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS",   "0") or "0")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(str(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES") or "10080").strip())
+REFRESH_TOKEN_EXPIRE_DAYS   = int(str(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS") or "30").strip())
 
 
 if not SECRET_KEY:
@@ -97,7 +99,7 @@ def decode_token(token: str, expected_type: Optional[str] = None) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token expired",
         )
-    except JWTError:
+    except PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
