@@ -5,9 +5,9 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import bcrypt
 import jwt
 from jwt.exceptions import ExpiredSignatureError, PyJWTError
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,11 +43,7 @@ if REFRESH_TOKEN_EXPIRE_DAYS <= 0:
         "Example: REFRESH_TOKEN_EXPIRE_DAYS=30"
     )
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security    = HTTPBearer()
-
-
-import bcrypt
+security = HTTPBearer()
 
 # ─────────────────────────────────────────────
 # PASSWORD
