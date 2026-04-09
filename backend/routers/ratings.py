@@ -106,18 +106,17 @@ async def rate_book(
             )
             db.add(rating_obj)
 
-        await db.commit()
-        
-        # We don't necessarily need refresh if we just want to return the data we have
-        # rating_obj.id is usually available after commit in most async drivers
-        
-        return {
-            "id": int(rating_obj.id) if rating_obj.id else 0,
-            "user_id": int(rating_obj.user_id),
+        # Capture all needed data BEFORE commit to prevent DetachedInstanceError
+        response_data = {
+            "id": int(rating_obj.id) if (hasattr(rating_obj, 'id') and rating_obj.id) else 0,
+            "user_id": int(current_user.id),
             "book_id": int(book.id),
             "csv_book_id": int(book.book_id) if book.book_id else None,
             "rating": int(rating_obj.rating),
         }
+
+        await db.commit()
+        return response_data
     
     except HTTPException:
         raise
