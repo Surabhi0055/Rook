@@ -19,7 +19,8 @@ def verify_google_token(token: str) -> dict:
         idinfo = id_token.verify_oauth2_token(
             token,
             google_requests.Request(),
-            audience=GOOGLE_CLIENT_ID
+            audience=GOOGLE_CLIENT_ID,
+            clock_skew=120  # Allow 120 seconds of clock drift to handle production server desync
         )
         
         # Verify issuer
