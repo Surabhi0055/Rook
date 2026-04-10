@@ -341,7 +341,7 @@ def _is_title_blacklisted(title: str) -> bool:
     return any(frag in t for frag in _HARD_TITLE_BLACKLIST)
 
 def _is_excluded_from_genre(row_idx: int, genre_key: str) -> bool:
-    title_lc  = str(books.iloc[row_idx].get("title_clean", ""))
+    title_lc  = str(books["title_clean"].iat[row_idx])
     for fragment in _GENRE_TITLE_EXCLUSIONS.get(genre_key, []):
         if fragment in title_lc:
             return True
@@ -358,7 +358,7 @@ def _is_excluded_from_genre(row_idx: int, genre_key: str) -> bool:
     return False
 
 def _passes_description_filter(row_idx: int, intent_key: str | None) -> bool:
-    title = str(books.iloc[row_idx].get("title_clean", ""))
+    title = str(books["title_clean"].iat[row_idx])
     if _is_title_blacklisted(title):
         return False
     if intent_key and _is_excluded_from_genre(row_idx, intent_key):
@@ -1382,7 +1382,7 @@ def recommend_by_genre(genre: str, top_n: int = 9999) -> list[dict]:
     scores_arr = pd.Series(scores_list, index=books.index)
     if g == "romance":
         for row_idx in range(len(books)):
-            title_lc = str(books.iloc[row_idx].get("title_clean", ""))
+            title_lc = str(books["title_clean"].iat[row_idx])
             if any(classic in title_lc for classic in _ROMANCE_CLASSICS_TITLES):
                 if scores_arr.iat[row_idx] < 0.05:
                     scores_arr.iat[row_idx] = 0.3
