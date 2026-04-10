@@ -2150,7 +2150,6 @@ export default function Home() {
               <HeroCarousel onOpen={handleOpen} savedSet={savedSet} wishedSet={wishedSet} onSave={handleSave} onWish={handleWish} />
               <SearchBar onSearch={handleSearch} onOpenBook={handleOpen} userName={userName} onGenre={handleGenre} />
               <RecentlyViewed books={recentBooks} onClear={() => { setRecentBooks([]); saveList(userKey, 'recent', []) }} />
-              <CategoriesGrid onSearch={handleSearch} onGenre={handleGenre} />
               <PopularNowSection onNav={handleNav} />
               <TopRatedSection likedBooks={likedBooks} savedBooks={savedBooks} readBooks={readBooks || []} onOpen={handleOpen} onLike={handleLike} onSave={handleSave} onRead={handleRead} onNav={handleNav}/>
               <RightNow />
@@ -2178,6 +2177,7 @@ export default function Home() {
               <AuthorsRow onNav={handleNav} onAuthor={handleAuthor} />
               {hasLibrary && savedBooks.find(b => !likedBooks.some(l => l.title === b.title)) && (() => { const sb = savedBooks.find(b => !likedBooks.some(l => l.title === b.title)); return <BecauseYouSection key={'s0-' + sb.title} seedBook={sb} label="Because You Saved" accent="#7ab8e0" likedTitles={likedTitles} savedTitles={savedTitles} /> })()}
               <SeasonSection isLight={isLight} />
+              <CategoriesGrid onSearch={handleSearch} onGenre={handleGenre} />
               <TravelSection />
               {hasLibrary && (readBooks || [])[1] && (<BecauseYouSection key={'r1-' + (readBooks || [])[1].title} seedBook={(readBooks || [])[1]} label="Because You Read" accent="#50a870" likedTitles={likedTitles} savedTitles={savedTitles} />)}
               <LazySection eyebrow="Comfort Reads" title="Cosy Reads" fetchFn={() => fetchMood('cosy', { top_n: 20, use_llm: false })} />

@@ -667,44 +667,48 @@ async function fetchGenreBooks(genre, signal, topN = 500) {
     signal
   )
   let tier0DirectBooks = tier0Direct ? extractBooks(tier0Direct) : []
+  let finalBooks = filter(tier0DirectBooks)
 
-  // ── Tier 1: Similar-book expansion for every seed cluster ──
-  const tier1Queries = clusters.flatMap(c => c.similar)
-  const tier1Results = await Promise.allSettled(
-    tier1Queries.slice(0, 40).map(term =>
-      tryFetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=30`, signal)
-    )
-  )
   let tier1Books = []
-  for (const r of tier1Results) {
-    if (r.status === 'fulfilled' && r.value) tier1Books.push(...extractBooks(r.value))
-  }
-
-  // ── Tier 2: Direct seed searches ──
-  const tier2Queries = [
-    ...(genre.searchTerms || []),
-    ...(genre.seeds || []),
-    ...clusters.map(c => c.seed),
-  ]
-  const tier2Results = await Promise.allSettled(
-    [...new Set(tier2Queries)].slice(0, 20).map(term =>
-      tryFetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=40`, signal)
-    )
-  )
   let tier2Books = []
-  for (const r of tier2Results) {
-    if (r.status === 'fulfilled' && r.value) tier2Books.push(...extractBooks(r.value))
-  }
-  // ── Tier 3: Broad label search ──
-  const broad = await tryFetch(
-    `${API_BASE}/search?query=${encodeURIComponent(genre.label)}&limit=50`,
-    signal
-  )
-  const tier3Books = broad ? extractBooks(broad) : []
+  let tier3Books = []
 
-  // ── Merge: tier0Direct first (highest quality), then seed tiers ──
-  const merged = [...tier0DirectBooks, ...tier1Books, ...tier2Books, ...tier3Books]
-  const finalBooks = filter(merged)
+  // ONLY hit the expensive search queries if the genre endpoint failed to return enough books
+  if (finalBooks.length < 30) {
+    // ── Tier 1: Similar-book expansion for every seed cluster ──
+    const tier1Queries = clusters.flatMap(c => c.similar)
+    const tier1Results = await Promise.allSettled(
+      tier1Queries.slice(0, 10).map(term =>
+        tryFetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=20`, signal)
+      )
+    )
+    for (const r of tier1Results) {
+      if (r.status === 'fulfilled' && r.value) tier1Books.push(...extractBooks(r.value))
+    }
+
+    // ── Tier 2: Direct seed searches ──
+    const tier2Queries = [
+      ...(genre.searchTerms || []),
+      ...(genre.seeds || []),
+      ...clusters.map(c => c.seed),
+    ]
+    const tier2Results = await Promise.allSettled(
+      [...new Set(tier2Queries)].slice(0, 10).map(term =>
+        tryFetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=20`, signal)
+      )
+    )
+    for (const r of tier2Results) {
+      if (r.status === 'fulfilled' && r.value) tier2Books.push(...extractBooks(r.value))
+    }
+    
+    // ── Tier 3: Broad label search ──
+    const broad = await tryFetch(`${API_BASE}/search?query=${encodeURIComponent(genre.label)}&limit=30`, signal)
+    tier3Books = broad ? extractBooks(broad) : []
+    
+    // ── Merge all tiers ──
+    const merged = [...tier0DirectBooks, ...tier1Books, ...tier2Books, ...tier3Books]
+    finalBooks = filter(merged)
+  }
 
   // If filtered result is still too small, use unfiltered tier0Direct as fallback
   const usedBooks = finalBooks.length >= 5
