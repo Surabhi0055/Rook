@@ -1650,8 +1650,11 @@ function CategoryCard({cat, onSearch, onGenre}){
 }
 function CategoriesGrid({onSearch, onGenre}){
   return(
-    <section className="home-section home-section-dark">
-      <div className="hs-header"><h3 className="hs-title">Discover by Categories</h3></div>
+    <section className="home-section" style={{padding:'20px 0'}}>
+      <div style={{padding:'0 28px 14px'}}>
+        <p style={{fontFamily:'Montserrat Alternates,sans-serif',fontSize:9,fontWeight:700,color:'var(--gold)',letterSpacing:'.2em',textTransform:'uppercase',margin:'0 0 4px'}}>Browse</p>
+        <h3 style={{fontFamily:'Montserrat Alternates,sans-serif',fontSize:20,fontWeight:700,color:'var(--cream)',margin:0}}>Discover by Categories</h3>
+      </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:14,padding:'0 28px 8px'}}>
         {CATEGORIES.map(cat=>(
           <CategoryCard key={cat.name} cat={cat} onSearch={onSearch} onGenre={onGenre}/>
@@ -1776,7 +1779,7 @@ function Sidebar({isDesktop,sidebarOpen,sidebarCollapsed,onClose,onNav,onGenre,p
           {!isCollapsed?(
             <>
               <div className={`sb-item sb-has-sub${recOpen?' open':''}`} onClick={()=>setRecOpen(o=>!o)} style={{cursor:'pointer'}}>
-                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21h6"/><path d="M12 3a6 6 0 0 1 6 6c0 2.22-1.21 4.16-3 5.2V17a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1v-2.8C7.21 13.16 6 11.22 6 9a6 6 0 0 1 6-6z"/></svg>
+                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
                 <span className="sb-label">Recommendation</span>
                 <svg className="sb-chevron" viewBox="0 0 24 24" style={{transform:recOpen?'rotate(180deg)':'none',transition:'transform 0.25s'}}><polyline points="6 9 12 15 18 9"/></svg>
               </div>
@@ -1797,7 +1800,7 @@ function Sidebar({isDesktop,sidebarOpen,sidebarCollapsed,onClose,onNav,onGenre,p
           ):(
             <>
               <div className="sb-item" onClick={()=>onNav('foryou')} style={{cursor:'pointer',justifyContent:'center',padding:'12px'}}>
-                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
               </div>
               <div className="sb-item" onClick={()=>setGenreOpen(o=>!o)} style={{cursor:'pointer',justifyContent:'center',padding:'12px'}}><svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
             </>

@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import TruncatedSVD
+from scipy.sparse import load_npz
 
 try:
     from cachetools import TTLCache
@@ -48,25 +49,40 @@ _FUSED_SOFT_POP_FLOOR = 20
 
 # data loading
 try:
-    model      = joblib.load(os.path.join(_PROJ_DIR, "models", "svd_model.pkl"))
-    _tfidf     = joblib.load(os.path.join(_PROJ_DIR, "models", "tfidf_vectorizer.pkl"))
-    _tfidf_matrix = load_npz(os.path.join(_PROJ_DIR, "models", "tfidf_matrix.npz"))
-    cosine_sim = joblib.load(os.path.join(_PROJ_DIR, "models", "cosine_sim.pkl"))
+    models_dir = os.path.join(_PROJ_DIR, "models")
+    dataset_dir = os.path.join(_PROJ_DIR, "dataset")
+    
+    # helper to safely load
+    def safe_load(path, func, default=None):
+        if os.path.exists(path):
+            try: return func(path)
+            except: return default
+        return default
 
-    ratings = pd.read_csv(os.path.join(_PROJ_DIR, "dataset", "ratings_processed.csv"))
-    books = pd.read_csv(os.path.join(_PROJ_DIR, "dataset", "books_genre.csv"))
-    books["title"] = books["title"].fillna("")
-    books["authors"] = books["authors"].fillna("")
-    books["description"] = books["description"].fillna("")
-    books["genre"] = books["genre"].fillna("")
+    model      = safe_load(os.path.join(models_dir, "svd_model.pkl"), joblib.load)
+    _tfidf     = safe_load(os.path.join(models_dir, "tfidf_vectorizer.pkl"), joblib.load)
+    _tfidf_matrix = safe_load(os.path.join(models_dir, "tfidf_matrix.npz"), load_npz)
+    cosine_sim = safe_load(os.path.join(models_dir, "cosine_sim.pkl"), joblib.load)
+
+    ratings = pd.read_csv(os.path.join(dataset_dir, "ratings_processed.csv"))
+    books = pd.read_csv(os.path.join(dataset_dir, "books_genre.csv"))
+    
+    # If matrix is missing but vectorizer exists, try a fallback re-transform
+    if _tfidf_matrix is None and _tfidf is not None and len(books) > 0:
+        try:
+            print("[startup] Re-generating TF-IDF matrix from books...")
+            _tfidf_matrix = _tfidf.transform(books["title"].fillna("") + " " + books["authors"].fillna(""))
+        except:
+            pass
+
 except Exception as e:
-    print(f"[recommender] WARNING: Missing essential ML models or CSV datasets. Error: {e}")
-    model = None
-    _tfidf = None
-    _tfidf_matrix = None
-    cosine_sim = None
+    print(f"[recommender] WARNING: Error during data loading: {e}")
+    model = model if 'model' in locals() else None
+    _tfidf = _tfidf if '_tfidf' in locals() else None
+    _tfidf_matrix = _tfidf_matrix if '_tfidf_matrix' in locals() else None
+    cosine_sim = cosine_sim if 'cosine_sim' in locals() else None
     ratings = pd.DataFrame(columns=["user_id", "book_id", "rating"])
-    books = pd.DataFrame(columns=["book_id", "title", "authors", "description", "genre", "average_rating", "rating_count", "image_url", "title_clean", "authors_clean", "genre_clean"])
+    books = pd.DataFrame(columns=["book_id", "title", "authors", "description", "genre", "average_rating", "rating_count", "image_url"])
 
 # Explicit safeguard: Force critical columns to exist, even if CSV loading was corrupt/empty
 for col in ["title", "authors", "description", "genre", "image_url"]:
@@ -242,12 +258,12 @@ def _get_effective_tags(row_idx: int) -> list[str]:
 # genre exclusion tables
 _DESC_EXTRA_EXCLUSIONS: dict[str, set[str]] = {
     "summer": {"fantasy", "epic-fantasy", "high-fantasy", "young-adult", "ya","magic", "wizards", "dragons",        "children", "childrens", "kids", "middle-grade",        "classics",        "manga", "graphic-novel", "comics",        "pillar", "kingsbridge",    },
-    "romance": {"fantasy", "epic-fantasy", "high-fantasy", "magic", "wizards","children", "childrens", "kids", "middle-grade","manga", "graphic-novel","classics",},
+    "romance": {"fantasy", "epic-fantasy", "high-fantasy", "magic", "wizards","children", "childrens", "kids", "middle-grade","manga", "graphic-novel",},
     "cosy": {"epic-fantasy", "high-fantasy", "fantasy", "magic","science-fiction", "sci-fi", "dystopia","horror", "dark", "gothic","children", "manga", "graphic-novel","classics",},
 }
 
 _HARD_TITLE_BLACKLIST = {"harry potter", "anne of green gables", "the pillars of the earth", "the kingsbridge series", "the great book of amber", "chronicles of amber", "the very hungry caterpillar", "the americas test kitchen", "taste of home cookbook", "america's test kitchen",  "dr seuss", "sherlock holmes",  "forever in blue", "second summer of the sisterhood",
-    "the door into summer", "a room with a view", "pride and prejudice", "the thorn birds", "nine stories", "hard eight","pablo neruda", "the poetry of pablo neruda", "twenty love poems", "the hitchhiker's guide", "ultimate hitchhikers guide",}
+    "the door into summer", "the thorn birds", "nine stories", "hard eight","pablo neruda", "the poetry of pablo neruda", "twenty love poems", "the hitchhiker's guide", "ultimate hitchhikers guide",}
 
 _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
     "romance": {"fantasy", "epic-fantasy", "high-fantasy", "dark-fantasy", "urban-fantasy","magic", "wizards", "dragons", "sword-and-sorcery", "fairy-tales", "mythology","science-fiction", "sci-fi", "scifi", "space", "dystopia", "dystopian","cyberpunk", "steampunk", "aliens", "post-apocalyptic","horror", "scary", "occult","children", "childrens", "kids", "middle-grade","non-fiction", "nonfiction", "biography", "autobiography", "memoir","self-help", "business", "economics", "philosophy", "psychology",  "history", "politics", "science", "travel", "essays",  "graphic-novel", "comics", "manga", "anime", "poetry", },
@@ -1310,7 +1326,7 @@ _SHELF_TAGS = { "favorites","favourite","owned","books-i-own","to-read","toread"
 
 _GENRE_SCORE_THRESHOLDS = {"romance":0.05,"fiction":0.10,"fantasy":0.10,"mystery":0.10,"thriller":0.10,"horror":0.10,"science fiction":0.08,"sci-fi":0.08,"young-adult":0.08,"biography":0.10,"history":0.10,"self-help":0.10,"non-fiction":0.10, "crime":0.10,"paranormal":0.08,"classics":0.08,"adventure":0.08,"_default":0.12,}
 
-_GENRE_MIN_RATINGS = { "romance":20,"fiction":30,"fantasy":30,"mystery":30,"thriller":30,"horror":20,"science fiction":20,"sci-fi":20,"young-adult":20,"biography":15,"history":15,"self-help":15,"non-fiction":10,"crime":20, "paranormal":10,"classics":30,"adventure":20,"_default":10,}
+_GENRE_MIN_RATINGS = { "romance":5,"fiction":30,"fantasy":30,"mystery":30,"thriller":30,"horror":20,"science fiction":20,"sci-fi":20,"young-adult":20,"biography":15,"history":15,"self-help":15,"non-fiction":10,"crime":20, "paranormal":10,"classics":30,"adventure":20,"_default":10,}
 
 def _score_genre_match(tags: list[str], approved: set) -> float:
     if not tags: return 0.0

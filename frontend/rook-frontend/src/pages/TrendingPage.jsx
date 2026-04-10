@@ -147,7 +147,7 @@ async function fetchBooks(tab) {
       )
     })
   } else {
-    // Primary: /recommend/genre — this is the strongest source
+    // Primary: /recommend/genre — strongest source, request 200 to ensure 80-100 after dedup
     fetches.push(
       fetch(`${API_BASE}/recommend/genre?genre=${encodeURIComponent(tab.apiGenre)}&top_n=200`)
         .then(r => r.ok ? r.json() : []).then(absorb).catch(()=>{})
@@ -161,15 +161,24 @@ async function fetchBooks(tab) {
     const extraTerms = GENRE_EXTRA_TERMS[tab.apiGenre] || []
     extraTerms.forEach(term => {
       fetches.push(
-        fetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=50`)
+        fetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=80`)
           .then(r => r.ok ? r.json() : []).then(absorb).catch(()=>{})
       )
     })
+    // Quaternary: mood-based search for even more coverage
+    fetches.push(
+      fetch(`${API_BASE}/recommend/mood`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mood: tab.apiGenre, top_n: 80, use_llm: false })
+      }).then(r => r.ok ? r.json() : []).then(absorb).catch(()=>{})
+    )
   }
 
   await Promise.allSettled(fetches)
   return sortByRating(dedupAndClean(results))
 }
+
 
 
 /* ── Main component ── */
