@@ -94,9 +94,9 @@ async def reconcile_db():
     cur.execute("PRAGMA table_info(books)")
     cols = [row[1] for row in cur.fetchall()]
     if "created_at" not in cols:
-        cur.execute("ALTER TABLE books ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+        cur.execute("ALTER TABLE books ADD COLUMN created_at DATETIME")
     if "updated_at" not in cols:
-        cur.execute("ALTER TABLE books ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+        cur.execute("ALTER TABLE books ADD COLUMN updated_at DATETIME")
     if "image_url" not in cols:
         cur.execute("ALTER TABLE books ADD COLUMN image_url TEXT")
     
@@ -105,7 +105,7 @@ async def reconcile_db():
     cols = [row[1] for row in cur.fetchall()]
     if cols: # only if it exists
         if "rated_at" not in cols:
-            cur.execute("ALTER TABLE ratings ADD COLUMN rated_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+            cur.execute("ALTER TABLE ratings ADD COLUMN rated_at DATETIME")
         if "review" not in cols:
             cur.execute("ALTER TABLE ratings ADD COLUMN review TEXT")
     
@@ -113,7 +113,7 @@ async def reconcile_db():
     cur.execute("PRAGMA table_info(refresh_tokens)")
     cols = [row[1] for row in cur.fetchall()]
     if cols and "created_at" not in cols:
-        cur.execute("ALTER TABLE refresh_tokens ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+        cur.execute("ALTER TABLE refresh_tokens ADD COLUMN created_at DATETIME")
     
     conn.commit()
     conn.close()
