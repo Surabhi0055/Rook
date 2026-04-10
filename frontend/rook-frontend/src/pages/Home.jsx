@@ -1776,7 +1776,7 @@ function Sidebar({isDesktop,sidebarOpen,sidebarCollapsed,onClose,onNav,onGenre,p
           {!isCollapsed?(
             <>
               <div className={`sb-item sb-has-sub${recOpen?' open':''}`} onClick={()=>setRecOpen(o=>!o)} style={{cursor:'pointer'}}>
-                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2l1.5 4.5h4.5l-3.5 2.5 1.5 4.5L12 11l-4 2.5 1.5-4.5L6 6.5h4.5z" opacity="0"/><path d="M9.663 17h4.673M12 3v1M6.343 6.343l.707.707M3 12h1M6.343 17.657l.707-.707M17.657 6.343l-.707.707M20 12h1M17.657 17.657l-.707-.707"/><circle cx="12" cy="12" r="4"/></svg>
+                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 4V2m0 14v-2M8 9H2m14 0h-2M3.515 14.485l-1.06 1.06M19.546 8.454l-1.061 1.06M14.485 14.485l1.06 1.061M8.454 8.454 7.393 7.393"/><circle cx="10" cy="9" r="3"/><path d="m15 15 5 5"/></svg>
                 <span className="sb-label">Recommendation</span>
                 <svg className="sb-chevron" viewBox="0 0 24 24" style={{transform:recOpen?'rotate(180deg)':'none',transition:'transform 0.25s'}}><polyline points="6 9 12 15 18 9"/></svg>
               </div>
