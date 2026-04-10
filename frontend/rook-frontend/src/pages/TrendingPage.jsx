@@ -78,7 +78,7 @@ const TABS = [
   { key: 'self-help', label: 'Self-Help',      apiGenre: 'self-help' },
 ]
 
-/* Blocked title patterns (box sets etc.) */
+/* ── Dedup + clean helper ── */
 const BLOCK_PATTERNS = [
   'boxed set','box set','omnibus','complete works','collected works',
   'volume 1','volume 2','vol 1','vol 2','vol 3',
@@ -94,13 +94,28 @@ function dedupAndClean(list) {
   })
 }
 
-/* Sort by rating desc, then by rating_count desc as tiebreaker */
+/* ── Sort by rating desc, rating_count as tiebreaker ── */
 function sortByRating(arr) {
   return [...arr].sort((a, b) => {
     const rDiff = (Number(b.average_rating) || 0) - (Number(a.average_rating) || 0)
     if (Math.abs(rDiff) > 0.01) return rDiff
     return (Number(b.rating_count) || 0) - (Number(a.rating_count) || 0)
   })
+}
+
+/* ── Genre search-term helpers ── */
+const GENRE_EXTRA_TERMS = {
+  fiction:    ['contemporary fiction','literary fiction','general fiction','bestselling fiction','award winning fiction'],
+  thriller:   ['psychological thriller','suspense thriller','crime thriller','gripping thriller','twisty thriller'],
+  fantasy:    ['epic fantasy','high fantasy','magic fantasy','sword sorcery','fantasy adventure'],
+  romance:    ['contemporary romance','historical romance','romantic fiction','love story','sweet romance','slow burn romance'],
+  mystery:    ['detective mystery','cozy mystery','whodunit','crime mystery','murder mystery'],
+  horror:     ['supernatural horror','gothic horror','stephen king','scary horror','dark horror'],
+  'science fiction': ['sci-fi space','dystopian fiction','cyberpunk','science fiction novel','speculative fiction'],
+  biography:  ['memoir biography','autobiography','true story','life story','inspiring biography'],
+  comedy:     ['funny comedy','humorous fiction','satirical novel','witty comedy','laugh out loud'],
+  classics:   ['classic literature','19th century fiction','canonical novel','timeless literature','classic novel'],
+  'self-help':['personal development','productivity habits','motivational','self improvement','mindset growth'],
 }
 
 /* ── Per-tab fetch ── */
@@ -119,34 +134,43 @@ async function fetchBooks(tab) {
   const fetches = []
 
   if (tab.apiGenre === null) {
-    // "All" tab: trending + every genre
+    // "All" tab: trending + every genre at 100 books each
     fetches.push(
-      fetch(`${API_BASE}/trending?top_n=150`).then(r => r.ok ? r.json() : []).then(absorb).catch(()=>{})
+      fetch(`${API_BASE}/trending?top_n=200`).then(r => r.ok ? r.json() : []).then(absorb).catch(()=>{})
     )
     const allGenres = ['fiction','romance','mystery','thriller','fantasy','horror',
       'science fiction','biography','comedy','classics','self-help']
     allGenres.forEach(g => {
       fetches.push(
-        fetch(`${API_BASE}/recommend/genre?genre=${encodeURIComponent(g)}&top_n=50`)
+        fetch(`${API_BASE}/recommend/genre?genre=${encodeURIComponent(g)}&top_n=100`)
           .then(r => r.ok ? r.json() : []).then(absorb).catch(()=>{})
       )
     })
   } else {
-    // Specific genre: call /recommend/genre
+    // Primary: /recommend/genre — this is the strongest source
     fetches.push(
-      fetch(`${API_BASE}/recommend/genre?genre=${encodeURIComponent(tab.apiGenre)}&top_n=150`)
+      fetch(`${API_BASE}/recommend/genre?genre=${encodeURIComponent(tab.apiGenre)}&top_n=200`)
         .then(r => r.ok ? r.json() : []).then(absorb).catch(()=>{})
     )
-    // Also search for the genre label to get extra books
+    // Secondary: search by genre label
     fetches.push(
-      fetch(`${API_BASE}/search?query=${encodeURIComponent(tab.apiGenre)}&limit=50`)
+      fetch(`${API_BASE}/search?query=${encodeURIComponent(tab.apiGenre)}&limit=100`)
         .then(r => r.ok ? r.json() : []).then(absorb).catch(()=>{})
     )
+    // Tertiary: extra search terms for broader coverage
+    const extraTerms = GENRE_EXTRA_TERMS[tab.apiGenre] || []
+    extraTerms.forEach(term => {
+      fetches.push(
+        fetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=50`)
+          .then(r => r.ok ? r.json() : []).then(absorb).catch(()=>{})
+      )
+    })
   }
 
   await Promise.allSettled(fetches)
   return sortByRating(dedupAndClean(results))
 }
+
 
 /* ── Main component ── */
 const _cache = {}

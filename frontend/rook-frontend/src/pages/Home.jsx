@@ -1607,13 +1607,14 @@ function CategoryCard({cat, onSearch, onGenre}){
       style={{
         cursor:'pointer', position:'relative', borderRadius:14,
         overflow:'hidden',
-        aspectRatio:'3/2',
+        minHeight:160,
+        height:160,
         display:'flex', alignItems:'flex-end',
         transform:hov?'translateY(-5px)':'none',
         transition:'transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s ease',
         boxShadow:hov?'0 20px 48px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.06)':'0 4px 16px rgba(0,0,0,0.35)',
+        background: cat.color,
       }}>
-      <div style={{position:'absolute',inset:0,background:cat.color,zIndex:0}}/>
       {cat.bookImg&&!imgFailed&&(
         <img src={cat.bookImg} alt={cat.book}
           onError={()=>setImgFailed(true)}
@@ -1623,7 +1624,6 @@ function CategoryCard({cat, onSearch, onGenre}){
             opacity: hov ? 0.65 : 0.5,
             transform: hov ? 'scale(1.10)' : 'scale(1.0)',
             transition:'transform 0.55s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease',
-            transformOrigin:'center center',
           }}/>
       )}
       <div style={{
@@ -1643,7 +1643,7 @@ function CategoryCard({cat, onSearch, onGenre}){
           color: hov ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.55)',
           letterSpacing:'.18em', textTransform:'uppercase',
           transition:'color 0.25s ease',
-        }}>Explore</div>
+        }}>Explore →</div>
       </div>
     </div>
   )
@@ -1776,7 +1776,7 @@ function Sidebar({isDesktop,sidebarOpen,sidebarCollapsed,onClose,onNav,onGenre,p
           {!isCollapsed?(
             <>
               <div className={`sb-item sb-has-sub${recOpen?' open':''}`} onClick={()=>setRecOpen(o=>!o)} style={{cursor:'pointer'}}>
-                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m2 22 7-7"/><path d="M14 14l3-3"/><path d="m15 9 5-5"/><path d="m11 5 2 2"/><path d="m19 13 2 2"/></svg>
+                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21h6"/><path d="M12 3a6 6 0 0 1 6 6c0 2.22-1.21 4.16-3 5.2V17a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1v-2.8C7.21 13.16 6 11.22 6 9a6 6 0 0 1 6-6z"/></svg>
                 <span className="sb-label">Recommendation</span>
                 <svg className="sb-chevron" viewBox="0 0 24 24" style={{transform:recOpen?'rotate(180deg)':'none',transition:'transform 0.25s'}}><polyline points="6 9 12 15 18 9"/></svg>
               </div>
