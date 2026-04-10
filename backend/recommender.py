@@ -68,6 +68,11 @@ except Exception as e:
     ratings = pd.DataFrame(columns=["user_id", "book_id", "rating"])
     books = pd.DataFrame(columns=["book_id", "title", "authors", "description", "genre", "average_rating", "rating_count", "image_url", "title_clean", "authors_clean", "genre_clean"])
 
+# Explicit safeguard: Force critical columns to exist, even if CSV loading was corrupt/empty
+for col in ["title", "authors", "description", "genre", "image_url"]:
+    if col not in books.columns:
+        books[col] = ""
+
 books = books[books["title"].apply(lambda x: isinstance(x, str) and bool(str(x).strip()))].copy()
 books = books.reset_index(drop=True)
 print(f"[startup] Books loaded: {len(books)}")
