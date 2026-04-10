@@ -131,4 +131,5 @@ dmypy.json
 .pytype/
 .ruff_cache/
 Pipfile.lock
-poetry.lock
+poetry.lockscreenshots/
+frontend/rook-frontend/dist/
