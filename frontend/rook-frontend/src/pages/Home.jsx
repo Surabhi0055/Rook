@@ -833,7 +833,7 @@ function HeroCarousel({ onOpen, savedSet, wishedSet, onSave, onWish }) {
     </div>
   )
 }
-function SearchBar({ onSearch, onOpenBook, userName }) {
+function SearchBar({ onSearch, onOpenBook, userName, onGenre }) {
   const [query, setQuery] = useState('') 
   const [acItems, setAcItems] = useState([])
   const [acOpen, setAcOpen] = useState(false)
@@ -971,7 +971,7 @@ function SearchBar({ onSearch, onOpenBook, userName }) {
         </div>
         <div className="home-pills">
           {GENRE_PILLS.map(g => (
-            <button key={g} className="pill" onClick={() => onSearch(g.toLowerCase())}>{g}</button>
+            <button key={g} className="pill" onClick={() => onGenre ? onGenre(g.toLowerCase()) : onSearch(g.toLowerCase())}>{g}</button>
           ))}
         </div>
       </div>
@@ -1598,11 +1598,11 @@ function AuthorsRow({onNav,onAuthor}){
   )
 }
   //  CATEGORIES GRID
-function CategoryCard({cat, onSearch}){
+function CategoryCard({cat, onSearch, onGenre}){
   const[imgFailed,setImgFailed]=useState(false)
   const[hov,setHov]=useState(false)
   return(
-    <div className={`category-card ${cat.cls}`} onClick={()=>onSearch(cat.query)}
+    <div className={`category-card ${cat.cls}`} onClick={()=> onGenre ? onGenre(cat.query) : onSearch(cat.query)}
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       style={{
         cursor:'pointer', position:'relative', borderRadius:14,
@@ -1648,13 +1648,13 @@ function CategoryCard({cat, onSearch}){
     </div>
   )
 }
-function CategoriesGrid({onSearch}){
+function CategoriesGrid({onSearch, onGenre}){
   return(
     <section className="home-section home-section-dark">
       <div className="hs-header"><h3 className="hs-title">Discover by Categories</h3></div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:14,padding:'0 28px 8px'}}>
         {CATEGORIES.map(cat=>(
-          <CategoryCard key={cat.name} cat={cat} onSearch={onSearch}/>
+          <CategoryCard key={cat.name} cat={cat} onSearch={onSearch} onGenre={onGenre}/>
         ))}
       </div>
     </section>
@@ -1776,7 +1776,7 @@ function Sidebar({isDesktop,sidebarOpen,sidebarCollapsed,onClose,onNav,onGenre,p
           {!isCollapsed?(
             <>
               <div className={`sb-item sb-has-sub${recOpen?' open':''}`} onClick={()=>setRecOpen(o=>!o)} style={{cursor:'pointer'}}>
-                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2l1.5 4.5h4.5l-3.5 2.5 1.5 4.5L12 11l-4 2.5 1.5-4.5L6 6.5h4.5z" opacity="0"/><path d="M9.663 17h4.673M12 3v1M6.343 6.343l.707.707M3 12h1M6.343 17.657l.707-.707M17.657 6.343l-.707.707M20 12h1M17.657 17.657l-.707-.707"/><circle cx="12" cy="12" r="4"/></svg>
                 <span className="sb-label">Recommendation</span>
                 <svg className="sb-chevron" viewBox="0 0 24 24" style={{transform:recOpen?'rotate(180deg)':'none',transition:'transform 0.25s'}}><polyline points="6 9 12 15 18 9"/></svg>
               </div>
@@ -2143,7 +2143,7 @@ export default function Home() {
           {currentPage === 'home' && (
             <>
               <HeroCarousel onOpen={handleOpen} savedSet={savedSet} wishedSet={wishedSet} onSave={handleSave} onWish={handleWish} />
-              <SearchBar onSearch={handleSearch} onOpenBook={handleOpen} userName={userName} />
+              <SearchBar onSearch={handleSearch} onOpenBook={handleOpen} userName={userName} onGenre={handleGenre} />
               <RecentlyViewed books={recentBooks} onClear={() => { setRecentBooks([]); saveList(userKey, 'recent', []) }} />
               <PopularNowSection onNav={handleNav} />
               <TopRatedSection likedBooks={likedBooks} savedBooks={savedBooks} readBooks={readBooks || []} onOpen={handleOpen} onLike={handleLike} onSave={handleSave} onRead={handleRead} onNav={handleNav}/>
@@ -2177,7 +2177,7 @@ export default function Home() {
               <LazySection eyebrow="Comfort Reads" title="Cosy Reads" fetchFn={() => fetchMood('cosy', { top_n: 20, use_llm: false })} />
               <ComicsMangaRows />
               {hasLibrary && likedBooks[2] && (<BecauseYouSection key={'l2-' + likedBooks[2].title} seedBook={likedBooks[2]} label="Because You Liked" accent="#e06080" likedTitles={likedTitles} savedTitles={savedTitles} />)}
-              <CategoriesGrid onSearch={handleSearch} />
+              <CategoriesGrid onSearch={handleSearch} onGenre={handleGenre} />
               <LazySection eyebrow="Edge of Your Seat" title="Thriller & Suspense" fetchFn={() => fetchMood('tense', { top_n: 20, use_llm: false })} />
               <div style={{ height: 48 }} />
             </>

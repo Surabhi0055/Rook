@@ -58,22 +58,6 @@ const TABS = [
   { key:'classics',   label:'Classics' },
   { key:'self-help',  label:'Self-Help' },
 ]
-const POPULAR_SEARCHES = [
-  "harry potter sorcerer's stone",'sherlock holmes','pride and prejudice',
-  'jane austen sense sensibility','to kill a mockingbird','the great gatsby',
-  'lord of the rings','agatha christie murder orient express',
-  'game of thrones','dune frank herbert','1984 george orwell',
-  'the alchemist paulo coelho','little women','jane eyre charlotte bronte',
-  'gone with the wind','the count of monte cristo','les miserables',
-  'crime and punishment dostoevsky','war and peace tolstoy',
-  'anne of green gables','rebecca daphne du maurier',
-  'wuthering heights emily bronte','great expectations dickens',
-  'the catcher in the rye','of mice and men steinbeck',
-  'the hobbit tolkien','brave new world huxley',
-  'dracula stoker','frankenstein shelley','moby dick',
-  'don quixote','anna karenina tolstoy','madame bovary',
-  'the scarlet letter','heart of darkness conrad',
-]
 
 const _BLOCK = ['harry potter boxed','harry potter collection','harry potter books 1',
   'lord of the rings art','lord of the rings box','jrr tolkien 4book',
@@ -93,59 +77,34 @@ function _clean(list) {
 export function TrendingPage({ onOpen, bookProps }) {
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch]       = useState('')
-  const [allBooks, setAllBooks]   = useState([])
+  const [booksByGenre, setBooksByGenre] = useState({})
   const [loading, setLoading]     = useState(true)
 
-  // Load once — same parallel search as Home Most Popular
   useEffect(() => {
     async function load() {
-      const seen = new Set(); const results = []
-
-      await Promise.allSettled(POPULAR_SEARCHES.map(async term => {
+      const data = {}
+      await Promise.all(TABS.map(async (tab) => {
         try {
-          const r = await fetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=3`)
-          if (!r.ok) return
-          const d = await r.json()
-          ;(Array.isArray(d) ? d : (d?.books||d?.results||[])).forEach(b => {
-            const k = (b.title||'').toLowerCase()
-            if (!seen.has(k) && b.title) { seen.add(k); results.push(b) }
-          })
-        } catch {}
+          const query = tab.key === 'all' ? 'trending' : `genre/${tab.key}`
+          const res = await apiFetch(`${API_BASE}/${query}?top_n=100`)
+          const list = Array.isArray(res) ? res : []
+          data[tab.key] = _clean(list.sort((a,b) => (Number(b.average_rating)||0) - (Number(a.average_rating)||0)))
+        } catch { data[tab.key] = [] }
       }))
-
-      // Also pull trending to fill out all genres
-      try {
-        const d = await apiFetch(`${API_BASE}/trending?top_n=100`)
-        ;(Array.isArray(d) ? d : []).forEach(b => {
-          const k = (b.title||'').toLowerCase()
-          if (!seen.has(k) && b.title) { seen.add(k); results.push(b) }
-        })
-      } catch {}
-
-      results.sort((a,b) => (Number(b.average_rating)||0) - (Number(a.average_rating)||0))
-      setAllBooks(_clean(results))
+      setBooksByGenre(data)
       setLoading(false)
     }
     load()
   }, [])
 
-  // Filter by tab client-side — no extra API calls
-  const tabFiltered = activeTab === 'all'
-    ? allBooks
-    : allBooks.filter(b => {
-        const g = (b.genre||'').toLowerCase()
-        const t = (b.title||'').toLowerCase()
-        const key = activeTab.replace('-',' ')
-        return g.includes(key) || t.includes(key)
-      })
-
+  const currentBooks = booksByGenre[activeTab] || []
   const displayed = search.trim()
-    ? tabFiltered.filter(b =>
+    ? currentBooks.filter(b =>
         (b.title||'').toLowerCase().includes(search.toLowerCase()) ||
         (b.authors||'').toLowerCase().includes(search.toLowerCase())
       )
-    : tabFiltered
- // background
+    : currentBooks
+
   return (
     <div style={{height:'100%',overflowY:'auto',scrollbarWidth:'thin',scrollbarColor:'rgba(114,57,63,0.4) transparent'}}>
       <div style={{padding:'36px 32px 24px',borderBottom:'1px solid rgba(201,168,76,0.08)',background:'#513229'}}>           
