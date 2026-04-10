@@ -384,24 +384,42 @@ def _make_soup(row: pd.Series) -> str:
     title  = str(row.get("title_clean",      "") or "")
     return f"{desc} {content} {cf} {genre} {author} {title}".strip()
 
-books["soup"]    = books.apply(_make_soup, axis=1)
-_tfidf           = TfidfVectorizer(analyzer="word", ngram_range=(1, 2),
-                                   min_df=2, max_features=40_000,
-                                   stop_words="english", sublinear_tf=True)
-_tfidf_matrix    = _tfidf.fit_transform(books["soup"])
-_K               = min(120, _tfidf_matrix.shape[1] - 1)
-_svd_desc        = TruncatedSVD(n_components=_K, random_state=42)
-_latent_mat      = _svd_desc.fit_transform(_tfidf_matrix)
+if len(books) > 0:
+    books["soup"] = books.apply(_make_soup, axis=1)
+    _tfidf = TfidfVectorizer(analyzer="word", ngram_range=(1, 2),
+                             min_df=2, max_features=40_000,
+                             stop_words="english", sublinear_tf=True)
+    try:
+        _tfidf_matrix = _tfidf.fit_transform(books["soup"])
+        _K = min(120, _tfidf_matrix.shape[1] - 1)
+        if _K > 0:
+            _svd_desc = TruncatedSVD(n_components=_K, random_state=42)
+            _latent_mat = _svd_desc.fit_transform(_tfidf_matrix)
+        else:
+            _latent_mat = np.zeros((len(books), 1))
+    except ValueError:
+        # Fallback if vocabulary is still empty after fit (e.g. all stop words)
+        from scipy.sparse import csr_matrix
+        _tfidf_matrix = csr_matrix((len(books), 1))
+        _latent_mat = np.zeros((len(books), 1))
+else:
+    books["soup"] = ""
+    from scipy.sparse import csr_matrix
+    _tfidf_matrix = csr_matrix((0, 0))
+    _latent_mat = np.zeros((0, 0))
 
 try:
-    _pu          = model.pu; _qi = model.qi; _bu = model.bu; _bi = model.bi
-    _global_mean = model.trainset.global_mean
-    _uid_map     = model.trainset._raw2inner_id_users
-    _iid_map     = model.trainset._raw2inner_id_items
-    _book_inner  = np.array([_iid_map.get(int(bid), -1) for bid in books["book_id"]], dtype=np.int32)
-    _USE_BATCH_SVD = True
-    print("[startup] SVD batch mode: ON")
-except AttributeError:
+    if len(books) > 0 and model is not None:
+        _pu = model.pu; _qi = model.qi; _bu = model.bu; _bi = model.bi
+        _global_mean = model.trainset.global_mean
+        _uid_map = model.trainset._raw2inner_id_users
+        _iid_map = model.trainset._raw2inner_id_items
+        _book_inner = np.array([_iid_map.get(int(bid), -1) for bid in books["book_id"]], dtype=np.int32)
+        _USE_BATCH_SVD = True
+        print("[startup] SVD batch mode: ON")
+    else:
+        _USE_BATCH_SVD = False
+except Exception:
     _USE_BATCH_SVD = False
     print("[startup] SVD batch mode: OFF")
 
