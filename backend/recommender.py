@@ -47,11 +47,26 @@ _RL_ALPHA             = 0.30
 _FUSED_SOFT_POP_FLOOR = 20
 
 # data loading
-model      = joblib.load(os.path.join(_PROJ_DIR, "models", "svd_model.pkl"))
-cosine_sim = joblib.load(os.path.join(_PROJ_DIR, "models", "cosine_sim.pkl"))
+try:
+    model      = joblib.load(os.path.join(_PROJ_DIR, "models", "svd_model.pkl"))
+    _tfidf     = joblib.load(os.path.join(_PROJ_DIR, "models", "tfidf_vectorizer.pkl"))
+    _tfidf_matrix = load_npz(os.path.join(_PROJ_DIR, "models", "tfidf_matrix.npz"))
+    cosine_sim = joblib.load(os.path.join(_PROJ_DIR, "models", "cosine_sim.pkl"))
 
-ratings = pd.read_csv(os.path.join(_PROJ_DIR, "dataset", "ratings_processed.csv"))
-books   = pd.read_csv(os.path.join(_PROJ_DIR, "dataset", "books_genre.csv"))
+    ratings = pd.read_csv(os.path.join(_PROJ_DIR, "dataset", "ratings_processed.csv"))
+    books = pd.read_csv(os.path.join(_PROJ_DIR, "dataset", "books_genre.csv"))
+    books["title"] = books["title"].fillna("")
+    books["authors"] = books["authors"].fillna("")
+    books["description"] = books["description"].fillna("")
+    books["genre"] = books["genre"].fillna("")
+except Exception as e:
+    print(f"[recommender] WARNING: Missing essential ML models or CSV datasets. Error: {e}")
+    model = None
+    _tfidf = None
+    _tfidf_matrix = None
+    cosine_sim = None
+    ratings = pd.DataFrame(columns=["user_id", "book_id", "rating"])
+    books = pd.DataFrame(columns=["book_id", "title", "authors", "description", "genre", "average_rating", "rating_count", "image_url", "title_clean", "authors_clean", "genre_clean"])
 
 books = books[books["title"].apply(lambda x: isinstance(x, str) and bool(str(x).strip()))].copy()
 books = books.reset_index(drop=True)
@@ -1290,7 +1305,7 @@ _SHELF_TAGS = { "favorites","favourite","owned","books-i-own","to-read","toread"
 
 _GENRE_SCORE_THRESHOLDS = {"romance":0.05,"fiction":0.10,"fantasy":0.10,"mystery":0.10,"thriller":0.10,"horror":0.10,"science fiction":0.08,"sci-fi":0.08,"young-adult":0.08,"biography":0.10,"history":0.10,"self-help":0.10,"non-fiction":0.10, "crime":0.10,"paranormal":0.08,"classics":0.08,"adventure":0.08,"_default":0.12,}
 
-_GENRE_MIN_RATINGS = { "romance":50,"fiction":30,"fantasy":30,"mystery":30,"thriller":30,"horror":20,"science fiction":20,"sci-fi":20,"young-adult":20,"biography":15,"history":15,"self-help":15,"non-fiction":10,"crime":20, "paranormal":10,"classics":30,"adventure":20,"_default":10,}
+_GENRE_MIN_RATINGS = { "romance":20,"fiction":30,"fantasy":30,"mystery":30,"thriller":30,"horror":20,"science fiction":20,"sci-fi":20,"young-adult":20,"biography":15,"history":15,"self-help":15,"non-fiction":10,"crime":20, "paranormal":10,"classics":30,"adventure":20,"_default":10,}
 
 def _score_genre_match(tags: list[str], approved: set) -> float:
     if not tags: return 0.0

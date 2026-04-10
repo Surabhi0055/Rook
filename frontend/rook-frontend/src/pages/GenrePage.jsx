@@ -313,7 +313,7 @@ const ALL_GENRES = [
     key: 'romance', label: 'Romance',
     mood: 'heartwarming romance love story emotional swoony sweet relationship clean contemporary',
     seeds: ['The Notebook','Me Before You','Outlander','Pride and Prejudice'],
-    blocklist: ['erotica','explicit','bdsm','smut','erotic','adult fiction','steamy'],
+    blocklist: ['erotica','explicit','bdsm','smut','erotic'],
   },
   {
     key: 'thriller', label: 'Thriller',
@@ -518,7 +518,7 @@ const ALL_GENRES = [
 ]
 
 const GLOBAL_BLOCKLIST = [
-  'erotica','erotic','explicit','bdsm','smut','adult fiction',
+  'erotica','erotic','explicit','bdsm','smut',
   'xxx','pornograph','hentai','dark erotica','steamy erotica'
 ]
 
