@@ -68,13 +68,28 @@ except Exception as e:
     ratings = pd.DataFrame(columns=["user_id", "book_id", "rating"])
     books = pd.DataFrame(columns=["book_id", "title", "authors", "description", "genre", "average_rating", "rating_count", "image_url", "title_clean", "authors_clean", "genre_clean"])
 
+# Explicit safeguard: Force critical columns to exist, even if CSV loading was corrupt/empty
+_REQUIRED_COLS = [
+    "book_id", "title", "authors", "description", "genre", 
+    "average_rating", "rating_count", "image_url", 
+    "title_clean", "authors_clean", "genre_clean", "published_year"
+]
+for col in _REQUIRED_COLS:
+    if col not in books.columns:
+        books[col] = "" if "index" not in col and "count" not in col and "rating" not in col else 0
+
 if len(books) > 0:
     books = books[books["title"].apply(lambda x: isinstance(x, str) and bool(str(x).strip()))].copy()
+
 books = books.reset_index(drop=True)
 print(f"[startup] Books loaded: {len(books)}")
 
-books["title_clean"]   = books["title"].fillna("").str.lower().str.strip()
-books["authors_clean"] = books["authors"].fillna("").str.lower().str.strip()
+if len(books) > 0:
+    books["title_clean"]   = books["title"].fillna("").str.lower().str.strip()
+    books["authors_clean"] = books["authors"].fillna("").str.lower().str.strip()
+else:
+    books["title_clean"] = ""
+    books["authors_clean"] = ""
 
 if "tag_name" in books.columns:
     _raw_genre = books["tag_name"].fillna("")
@@ -129,12 +144,20 @@ else:
             mask = books["published_year"] == ""
             books.loc[mask, "published_year"] = books.loc[mask, col].apply(_extract_year)
 
-_rc   = ratings.groupby("book_id").size().reset_index(name="rating_count")
-books = books.merge(_rc, on="book_id", how="left")
-books["rating_count"] = books["rating_count"].fillna(0).astype(int)
-if "average_rating" not in books.columns:
+if len(books) > 0:
+    _rc = ratings.groupby("book_id").size().reset_index(name="new_rating_count")
+    books = books.merge(_rc, on="book_id", how="left")
+    # If rating_count existed and new_rating_count comes from merge, prioritize the merge result
+    if "new_rating_count" in books.columns:
+        books["rating_count"] = books["new_rating_count"].fillna(0)
+        books.drop(columns=["new_rating_count"], inplace=True, errors="ignore")
+    
+    books["rating_count"] = books["rating_count"].fillna(0).astype(int)
+    books["average_rating"] = pd.to_numeric(books["average_rating"], errors="coerce").fillna(0.0)
+else:
+    books["rating_count"] = 0
     books["average_rating"] = 0.0
-books["average_rating"] = pd.to_numeric(books["average_rating"], errors="coerce").fillna(0.0)
+
 books = books.reset_index(drop=True)
 
 # page-count detection
