@@ -481,7 +481,7 @@ def search(
     summary="Global trending books",
 )
 def trending(
-    top_n: int = Query(20, ge=1, le=200),
+    top_n: int = Query(100, ge=1, le=250),
 ):
     return trending_books(top_n)
 

@@ -269,7 +269,7 @@ _HARD_TITLE_BLACKLIST = {"harry potter", "anne of green gables", "the pillars of
     "the door into summer", "a room with a view", "pride and prejudice", "the thorn birds", "nine stories", "hard eight","pablo neruda", "the poetry of pablo neruda", "twenty love poems", "the hitchhiker's guide", "ultimate hitchhikers guide",}
 
 _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
-    "romance": {"fantasy", "epic-fantasy", "high-fantasy", "dark-fantasy", "urban-fantasy","magic", "wizards", "dragons", "sword-and-sorcery", "fairy-tales", "mythology","science-fiction", "sci-fi", "scifi", "space", "dystopia", "dystopian","cyberpunk", "steampunk", "aliens", "post-apocalyptic","horror", "scary", "occult","children", "childrens", "kids", "middle-grade","non-fiction", "nonfiction", "biography", "autobiography", "memoir","self-help", "business", "economics", "philosophy", "psychology",  "history", "politics", "science", "travel", "essays",  "graphic-novel", "comics", "manga", "anime", "poetry", },
+    "romance": {"non-fiction", "biography", "autobiography", "self-help", "business", "economics", "politics", "science", "travel", "essays", "comics", "manga"},
     "fiction": { "non-fiction", "nonfiction", "biography", "autobiography", "memoir","self-help", "business", "economics", "philosophy", "psychology", "history", "politics", "science", "travel", "essays","graphic-novel", "comics", "manga", "anime", "true-story", "true-crime", },
     "fantasy": {"romance-novels", "chick-lit", "contemporary-romance", "biography", "autobiography", "memoir", "non-fiction", "nonfiction",  "self-help", "business", "manga", "anime",},
     "mystery":  {"children", "childrens", "kids", "middle-grade"},
@@ -1684,7 +1684,7 @@ def book_recommender(user_id: int, top_n: int = 10) -> list:
               for bid, score in preds[:top_n] if int(bid) in _book_id_to_idx}
     return _rows_to_dicts_parallel(books.iloc[chosen], top_n, pr)
 
-def trending_books(top_n: int = 20) -> list:
+def trending_books(top_n: int = 100) -> list:
     return _rows_to_dicts_parallel(books.iloc[_trending_order[:top_n]], top_n)
 
 # search autocomplete
