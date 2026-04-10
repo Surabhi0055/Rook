@@ -68,7 +68,8 @@ except Exception as e:
     ratings = pd.DataFrame(columns=["user_id", "book_id", "rating"])
     books = pd.DataFrame(columns=["book_id", "title", "authors", "description", "genre", "average_rating", "rating_count", "image_url", "title_clean", "authors_clean", "genre_clean"])
 
-books = books[books["title"].apply(lambda x: isinstance(x, str) and bool(str(x).strip()))].copy()
+if len(books) > 0:
+    books = books[books["title"].apply(lambda x: isinstance(x, str) and bool(str(x).strip()))].copy()
 books = books.reset_index(drop=True)
 print(f"[startup] Books loaded: {len(books)}")
 
