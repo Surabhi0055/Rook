@@ -1,12 +1,3 @@
----
-title: Rook API
-emoji: 📚
-colorFrom: blue
-colorTo: purple
-sdk: docker
-pinned: false
----
-
 <div align="center">
 
 # ROOK

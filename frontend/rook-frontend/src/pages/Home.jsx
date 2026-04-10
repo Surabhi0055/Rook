@@ -1607,13 +1607,14 @@ function CategoryCard({cat, onSearch, onGenre}){
       style={{
         cursor:'pointer', position:'relative', borderRadius:14,
         overflow:'hidden',
-        aspectRatio:'3/2',
+        minHeight:160,
+        height:160,
         display:'flex', alignItems:'flex-end',
         transform:hov?'translateY(-5px)':'none',
         transition:'transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s ease',
         boxShadow:hov?'0 20px 48px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.06)':'0 4px 16px rgba(0,0,0,0.35)',
+        background: cat.color,
       }}>
-      <div style={{position:'absolute',inset:0,background:cat.color,zIndex:0}}/>
       {cat.bookImg&&!imgFailed&&(
         <img src={cat.bookImg} alt={cat.book}
           onError={()=>setImgFailed(true)}
@@ -1623,7 +1624,6 @@ function CategoryCard({cat, onSearch, onGenre}){
             opacity: hov ? 0.65 : 0.5,
             transform: hov ? 'scale(1.10)' : 'scale(1.0)',
             transition:'transform 0.55s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease',
-            transformOrigin:'center center',
           }}/>
       )}
       <div style={{
@@ -1643,7 +1643,7 @@ function CategoryCard({cat, onSearch, onGenre}){
           color: hov ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.55)',
           letterSpacing:'.18em', textTransform:'uppercase',
           transition:'color 0.25s ease',
-        }}>Explore</div>
+        }}>Explore →</div>
       </div>
     </div>
   )
@@ -1742,12 +1742,12 @@ function Sidebar({isDesktop,sidebarOpen,sidebarCollapsed,onClose,onNav,onGenre,p
   const isVisible=isDesktop||sidebarOpen; const isCollapsed=isDesktop&&sidebarCollapsed; const w=isCollapsed?62:230
   const SIDEBAR_GENRES=['fiction','fantasy','mystery','romance','thriller','science fiction','horror','biography','comedy','self-help']
   const navItems=[
-    {key:'home', label:'Home', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
-    {key:'trending',label:'Trending', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 1 18"/><polyline points="16 7 22 7 22 13"/></svg>},
-    {key:'saved', label:'Saved Books', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>},
-    {key:'wishlist',label:'Wishlist', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>},
-    {key:'read', label:'Already Read', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>},
-    {key:'ratings', label:'Your Ratings', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>},
+    {key:'home', label:'Home', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
+    {key:'trending',label:'Trending', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>},
+    {key:'saved', label:'Saved Books', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>},
+    {key:'wishlist',label:'Wishlist', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>},
+    {key:'read', label:'Already Read', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>},
+    {key:'ratings', label:'Your Ratings', icon:<svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>},
   ]
   const initial = (userName||'R').charAt(0).toUpperCase()
   const hue = (userName||'Reader').split('').reduce((a,c)=>a+c.charCodeAt(0),0)%360
@@ -1776,7 +1776,7 @@ function Sidebar({isDesktop,sidebarOpen,sidebarCollapsed,onClose,onNav,onGenre,p
           {!isCollapsed?(
             <>
               <div className={`sb-item sb-has-sub${recOpen?' open':''}`} onClick={()=>setRecOpen(o=>!o)} style={{cursor:'pointer'}}>
-                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m2 22 7-7"/><path d="M14 14l3-3"/><path d="m15 9 5-5"/><path d="m11 5 2 2"/><path d="m19 13 2 2"/></svg>
+                <svg className="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21h6"/><path d="M12 3a6 6 0 0 1 6 6c0 2.22-1.21 4.16-3 5.2V17a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1v-2.8C7.21 13.16 6 11.22 6 9a6 6 0 0 1 6-6z"/></svg>
                 <span className="sb-label">Recommendation</span>
                 <svg className="sb-chevron" viewBox="0 0 24 24" style={{transform:recOpen?'rotate(180deg)':'none',transition:'transform 0.25s'}}><polyline points="6 9 12 15 18 9"/></svg>
               </div>

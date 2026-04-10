@@ -137,7 +137,7 @@ def recommend_user(
 )
 def recommend_genre(
     genre: str = Query(..., description="Genre name, e.g. 'fantasy'"),
-    top_n: int = Query(20, ge=1, le=200),
+    top_n: int = Query(20, ge=1, le=500),
 ):
     return recommend_by_genre(genre, top_n)
 
@@ -481,7 +481,7 @@ def search(
     summary="Global trending books",
 )
 def trending(
-    top_n: int = Query(100, ge=1, le=250),
+    top_n: int = Query(20, ge=1, le=500),
 ):
     return trending_books(top_n)
 

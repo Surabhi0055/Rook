@@ -48,14 +48,13 @@ venv.bak/
 rook.db
 
 # ─── ML MODELS (large binary files) ─────────────────────────
-# We use Git LFS now to push these, so they should NOT be ignored!
-# models/*.pkl
-# models/*.index
-# models/*.npy
-# models/*.bin
+models/*.pkl
+models/*.index
+models/*.npy
+models/*.bin
 
 # ─── DATASET (large CSV files) ───────────────────────────────
-# dataset/*.csv
+dataset/*.csv
 
 # ─── UPLOADS (user-generated content) ────────────────────────
 uploads/
@@ -132,4 +131,5 @@ dmypy.json
 .pytype/
 .ruff_cache/
 Pipfile.lock
-poetry.lock
+poetry.lockscreenshots/
+frontend/rook-frontend/dist/

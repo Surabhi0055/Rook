@@ -69,27 +69,17 @@ except Exception as e:
     books = pd.DataFrame(columns=["book_id", "title", "authors", "description", "genre", "average_rating", "rating_count", "image_url", "title_clean", "authors_clean", "genre_clean"])
 
 # Explicit safeguard: Force critical columns to exist, even if CSV loading was corrupt/empty
-_REQUIRED_COLS = [
-    "book_id", "title", "authors", "description", "genre", 
-    "average_rating", "rating_count", "image_url", 
-    "title_clean", "authors_clean", "genre_clean", "published_year"
-]
-for col in _REQUIRED_COLS:
+for col in ["title", "authors", "description", "genre", "image_url"]:
     if col not in books.columns:
-        books[col] = "" if "index" not in col and "count" not in col and "rating" not in col else 0
+        books[col] = ""
 
 if len(books) > 0:
     books = books[books["title"].apply(lambda x: isinstance(x, str) and bool(str(x).strip()))].copy()
-
 books = books.reset_index(drop=True)
 print(f"[startup] Books loaded: {len(books)}")
 
-if len(books) > 0:
-    books["title_clean"]   = books["title"].fillna("").str.lower().str.strip()
-    books["authors_clean"] = books["authors"].fillna("").str.lower().str.strip()
-else:
-    books["title_clean"] = ""
-    books["authors_clean"] = ""
+books["title_clean"]   = books["title"].fillna("").str.lower().str.strip()
+books["authors_clean"] = books["authors"].fillna("").str.lower().str.strip()
 
 if "tag_name" in books.columns:
     _raw_genre = books["tag_name"].fillna("")
@@ -144,20 +134,12 @@ else:
             mask = books["published_year"] == ""
             books.loc[mask, "published_year"] = books.loc[mask, col].apply(_extract_year)
 
-if len(books) > 0:
-    _rc = ratings.groupby("book_id").size().reset_index(name="new_rating_count")
-    books = books.merge(_rc, on="book_id", how="left")
-    # If rating_count existed and new_rating_count comes from merge, prioritize the merge result
-    if "new_rating_count" in books.columns:
-        books["rating_count"] = books["new_rating_count"].fillna(0)
-        books.drop(columns=["new_rating_count"], inplace=True, errors="ignore")
-    
-    books["rating_count"] = books["rating_count"].fillna(0).astype(int)
-    books["average_rating"] = pd.to_numeric(books["average_rating"], errors="coerce").fillna(0.0)
-else:
-    books["rating_count"] = 0
+_rc   = ratings.groupby("book_id").size().reset_index(name="rating_count")
+books = books.merge(_rc, on="book_id", how="left")
+books["rating_count"] = books["rating_count"].fillna(0).astype(int)
+if "average_rating" not in books.columns:
     books["average_rating"] = 0.0
-
+books["average_rating"] = pd.to_numeric(books["average_rating"], errors="coerce").fillna(0.0)
 books = books.reset_index(drop=True)
 
 # page-count detection
@@ -269,7 +251,7 @@ _HARD_TITLE_BLACKLIST = {"harry potter", "anne of green gables", "the pillars of
     "the door into summer", "a room with a view", "pride and prejudice", "the thorn birds", "nine stories", "hard eight","pablo neruda", "the poetry of pablo neruda", "twenty love poems", "the hitchhiker's guide", "ultimate hitchhikers guide",}
 
 _GENRE_EXCLUSION_TAGS: dict[str, set[str]] = {
-    "romance": {"non-fiction", "biography", "autobiography", "self-help", "business", "economics", "politics", "science", "travel", "essays", "comics", "manga"},
+    "romance": {"fantasy", "epic-fantasy", "high-fantasy", "dark-fantasy", "urban-fantasy","magic", "wizards", "dragons", "sword-and-sorcery", "fairy-tales", "mythology","science-fiction", "sci-fi", "scifi", "space", "dystopia", "dystopian","cyberpunk", "steampunk", "aliens", "post-apocalyptic","horror", "scary", "occult","children", "childrens", "kids", "middle-grade","non-fiction", "nonfiction", "biography", "autobiography", "memoir","self-help", "business", "economics", "philosophy", "psychology",  "history", "politics", "science", "travel", "essays",  "graphic-novel", "comics", "manga", "anime", "poetry", },
     "fiction": { "non-fiction", "nonfiction", "biography", "autobiography", "memoir","self-help", "business", "economics", "philosophy", "psychology", "history", "politics", "science", "travel", "essays","graphic-novel", "comics", "manga", "anime", "true-story", "true-crime", },
     "fantasy": {"romance-novels", "chick-lit", "contemporary-romance", "biography", "autobiography", "memoir", "non-fiction", "nonfiction",  "self-help", "business", "manga", "anime",},
     "mystery":  {"children", "childrens", "kids", "middle-grade"},
@@ -384,42 +366,24 @@ def _make_soup(row: pd.Series) -> str:
     title  = str(row.get("title_clean",      "") or "")
     return f"{desc} {content} {cf} {genre} {author} {title}".strip()
 
-if len(books) > 0:
-    books["soup"] = books.apply(_make_soup, axis=1)
-    _tfidf = TfidfVectorizer(analyzer="word", ngram_range=(1, 2),
-                             min_df=2, max_features=40_000,
-                             stop_words="english", sublinear_tf=True)
-    try:
-        _tfidf_matrix = _tfidf.fit_transform(books["soup"])
-        _K = min(120, _tfidf_matrix.shape[1] - 1)
-        if _K > 0:
-            _svd_desc = TruncatedSVD(n_components=_K, random_state=42)
-            _latent_mat = _svd_desc.fit_transform(_tfidf_matrix)
-        else:
-            _latent_mat = np.zeros((len(books), 1))
-    except ValueError:
-        # Fallback if vocabulary is still empty after fit (e.g. all stop words)
-        from scipy.sparse import csr_matrix
-        _tfidf_matrix = csr_matrix((len(books), 1))
-        _latent_mat = np.zeros((len(books), 1))
-else:
-    books["soup"] = ""
-    from scipy.sparse import csr_matrix
-    _tfidf_matrix = csr_matrix((0, 0))
-    _latent_mat = np.zeros((0, 0))
+books["soup"]    = books.apply(_make_soup, axis=1)
+_tfidf           = TfidfVectorizer(analyzer="word", ngram_range=(1, 2),
+                                   min_df=2, max_features=40_000,
+                                   stop_words="english", sublinear_tf=True)
+_tfidf_matrix    = _tfidf.fit_transform(books["soup"])
+_K               = min(120, _tfidf_matrix.shape[1] - 1)
+_svd_desc        = TruncatedSVD(n_components=_K, random_state=42)
+_latent_mat      = _svd_desc.fit_transform(_tfidf_matrix)
 
 try:
-    if len(books) > 0 and model is not None:
-        _pu = model.pu; _qi = model.qi; _bu = model.bu; _bi = model.bi
-        _global_mean = model.trainset.global_mean
-        _uid_map = model.trainset._raw2inner_id_users
-        _iid_map = model.trainset._raw2inner_id_items
-        _book_inner = np.array([_iid_map.get(int(bid), -1) for bid in books["book_id"]], dtype=np.int32)
-        _USE_BATCH_SVD = True
-        print("[startup] SVD batch mode: ON")
-    else:
-        _USE_BATCH_SVD = False
-except Exception:
+    _pu          = model.pu; _qi = model.qi; _bu = model.bu; _bi = model.bi
+    _global_mean = model.trainset.global_mean
+    _uid_map     = model.trainset._raw2inner_id_users
+    _iid_map     = model.trainset._raw2inner_id_items
+    _book_inner  = np.array([_iid_map.get(int(bid), -1) for bid in books["book_id"]], dtype=np.int32)
+    _USE_BATCH_SVD = True
+    print("[startup] SVD batch mode: ON")
+except AttributeError:
     _USE_BATCH_SVD = False
     print("[startup] SVD batch mode: OFF")
 
@@ -1684,7 +1648,7 @@ def book_recommender(user_id: int, top_n: int = 10) -> list:
               for bid, score in preds[:top_n] if int(bid) in _book_id_to_idx}
     return _rows_to_dicts_parallel(books.iloc[chosen], top_n, pr)
 
-def trending_books(top_n: int = 100) -> list:
+def trending_books(top_n: int = 20) -> list:
     return _rows_to_dicts_parallel(books.iloc[_trending_order[:top_n]], top_n)
 
 # search autocomplete
