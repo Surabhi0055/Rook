@@ -649,6 +649,44 @@ async function tryFetch(url, signal) {
     return null
   }
 }
+
+const AUTHORS_BY_GENRE = {
+  'fiction': ['Patterson', 'Atwood', 'Grisham', 'Picoult', 'King', 'Rooney', 'Moyes', 'Murakami'],
+  'fantasy': ['Tolkien', 'Sanderson', 'Jordan', 'Riordan', 'Maas', 'Gaiman', 'Rothfuss', 'Martin'],
+  'mystery': ['Christie', 'Penny', 'Connelly', 'Osman', 'Doyle', 'Child', 'Moriarty', 'Hawkins'],
+  'romance': ['Sparks', 'Moyes', 'Hoover', 'Austen', 'Quinn', 'Roberts', 'Henry', 'Kleypas'],
+  'thriller': ['Patterson', 'Child', 'Flynn', 'Hawkins', 'Turow', 'Baldacci', 'King', 'Silva'],
+  'science fiction': ['Herbert', 'Asimov', 'Weir', 'Crouch', 'Corey', 'Wells', 'Stephenson'],
+  'horror': ['King', 'Koontz', 'Rice', 'Jackson', 'Stoker', 'Barker', 'Straub'],
+  'biography': ['Isaacson', 'Chernow', 'McCullough', 'Caro', 'Obama', 'Trevor Noah'],
+  'history': ['Larson', 'Grann', 'Macintyre', 'Tuchman', 'Ambrose', 'Frankopan'],
+  'self-help': ['Clear', 'Manson', 'Goggins', 'Covey', 'Brown', 'Holiday', 'Tolle'],
+  'comedy': ['Sedaris', 'Poehler', 'Fey', 'Noah', 'Bryson', 'Adams', 'Pratchett'],
+  'young-adult': ['Rowling', 'Collins', 'Green', 'Meyer', 'Schwab', 'Black', 'Riordan'],
+  'classics': ['Austen', 'Dickens', 'Tolkien', 'Orwell', 'Fitzgerald', 'Hemingway', 'Bronte'],
+  'crime': ['Chandler', 'Connelly', 'French', 'Patterson', 'Ellroy', 'Grisham', 'Child'],
+  'paranormal': ['Meyer', 'Ward', 'Harris', 'Briggs', 'Singh', 'Maas', 'Clare'],
+  'adventure': ['Cussler', 'Rollins', 'Riordan', 'Tolkien', 'Rowling', 'Defoe'],
+  'non-fiction': ['Gladwell', 'Harari', 'Bryson', 'Krakauer', 'Lewis', 'Kahneman'],
+  'psychology': ['Kahneman', 'Sapolsky', 'Pink', 'Goleman', 'Ariely', 'Duhigg'],
+  'philosophy': ['Aurelius', 'Seneca', 'Plato', 'Sartre', 'Nietzsche', 'Camus'],
+  'poetry': ['Kaur', 'Oliver', 'Angelou', 'Whitman', 'Plath', 'Dickinson'],
+  'graphic novel': ['Vaughan', 'Moore', 'Spiegelman', 'Kirkman', 'Tamaki', 'Gaiman'],
+  'children': ['Dahl', 'Rowling', 'Riordan', 'Kinney', 'Pilkey', 'Seuss', 'White'],
+  'rom-com': ['Kinsella', 'Henry', 'Fielding', 'Simsion', 'Sparks', 'Thorne', 'McQuiston'],
+  'action-thriller': ['Child', 'Ludlum', 'Fleming', 'Flynn', 'Thor', 'Clancy'],
+  'horror-thriller': ['King', 'Harris', 'Flynn', 'Koontz', 'McFadden', 'Hill'],
+  'romantic-suspense': ['Roberts', 'Brown', 'Coben', 'Howard', 'Garwood', 'Ward'],
+  'dark-fantasy': ['Abercrombie', 'Kuang', 'Gaiman', 'Lawrence', 'Erikson', 'Bancroft'],
+  'cozy-mystery': ['Christie', 'Osman', 'Beaton', 'Bradley', 'Bowen', 'Childs'],
+  'sci-fi-thriller': ['Crouch', 'Weir', 'Crichton', 'Gibson', 'Stephenson', 'Cline'],
+  'historical-fiction': ['Quinn', 'Hannah', 'Doerr', 'Follett', 'Mantel', 'Gregory', 'Towles'],
+  'paranormal-romance': ['Maas', 'Mead', 'Fitzpatrick', 'Ward', 'Kenyon', 'Showalter'],
+  'literary-fiction': ['Yanagihara', 'Roy', 'Tartt', 'Eugenides', 'Franzen', 'Ishiguro'],
+  'true-crime': ['Rule', 'Grann', 'Bugliosi', 'McNamara', 'Capote', 'Larson'],
+  'spy-thriller': ['Le Carre', 'Fleming', 'Silva', 'Ludlum', 'Child', 'Horowitz']
+}
+
 function extractBooks(raw) {
   return Array.isArray(raw) ? raw : (raw?.books || [])
 }
@@ -659,68 +697,58 @@ async function fetchGenreBooks(genre, signal, topN = 500) {
   const filter = raw =>
     dedup(extractBooks(raw)).filter(b => isClean(b, blocklist))
 
-  // ── Tier 0 (NEW): Direct /recommend/genre — primary reliable source ──
-  // This hits the backend's pre-built genre index and always returns results
-  const genreApiKey = genre.key === 'science fiction' ? 'science fiction' : genre.key
-  const tier0Direct = await tryFetch(
-    `${API_BASE}/recommend/genre?genre=${encodeURIComponent(genreApiKey)}&top_n=200`,
-    signal
-  )
-  let tier0DirectBooks = tier0Direct ? extractBooks(tier0Direct) : []
-  let finalBooks = filter(tier0DirectBooks)
+  // BYPASS: The backend recommend_by_genre is too slow (>60s). We instead pull books from:
+  //   1. /recommend/author for all canonical genre authors (fast, <1s each)
+  //   2. /search for top seed titles (fast, <1s each)
+  //   3. /trending (filtered client-side to genre)
+  // All results are merged, deduped, and returned.
 
-  let tier1Books = []
-  let tier2Books = []
-  let tier3Books = []
+  let finalBooks = []
+  const genreApiKey = genre.key
+  const authors = (AUTHORS_BY_GENRE[genreApiKey] || []).slice(0, 10) // up to 10 authors
 
-  // ONLY hit the expensive search queries if the genre endpoint failed to return enough books
-  if (finalBooks.length < 30) {
-    // ── Tier 1: Similar-book expansion for every seed cluster ──
-    const tier1Queries = clusters.flatMap(c => c.similar)
-    const tier1Results = await Promise.allSettled(
-      tier1Queries.slice(0, 10).map(term =>
-        tryFetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=20`, signal)
-      )
-    )
-    for (const r of tier1Results) {
-      if (r.status === 'fulfilled' && r.value) tier1Books.push(...extractBooks(r.value))
-    }
+  // Seed titles from clusters (just seeds, no similar — seeds are most distinctive)
+  const seedQueries = [...new Set(
+    (clusters || []).map(c => c.seed).filter(Boolean)
+  )].slice(0, 8)
 
-    // ── Tier 2: Direct seed searches ──
-    const tier2Queries = [
-      ...(genre.searchTerms || []),
-      ...(genre.seeds || []),
-      ...clusters.map(c => c.seed),
-    ]
-    const tier2Results = await Promise.allSettled(
-      [...new Set(tier2Queries)].slice(0, 10).map(term =>
-        tryFetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=20`, signal)
-      )
-    )
-    for (const r of tier2Results) {
-      if (r.status === 'fulfilled' && r.value) tier2Books.push(...extractBooks(r.value))
-    }
-    
-    // ── Tier 3: Broad label search ──
-    const broad = await tryFetch(`${API_BASE}/search?query=${encodeURIComponent(genre.label)}&limit=30`, signal)
-    tier3Books = broad ? extractBooks(broad) : []
-    
-    // ── Merge all tiers ──
-    const merged = [...tier0DirectBooks, ...tier1Books, ...tier2Books, ...tier3Books]
-    finalBooks = filter(merged)
+  console.log(`[GenrePage] Fetching ${authors.length} authors + ${seedQueries.length} seeds + trending for "${genre.label}"`)
+
+  const [trendingResult, ...restResults] = await Promise.allSettled([
+    tryFetch(`${API_BASE}/trending?top_n=250`, signal),
+    ...authors.map(a => tryFetch(`${API_BASE}/recommend/author?author=${encodeURIComponent(a)}&top_n=100`, signal)),
+    ...seedQueries.map(term => tryFetch(`${API_BASE}/search?query=${encodeURIComponent(term)}&limit=20`, signal))
+  ])
+
+  const gathered = []
+
+  // 1. Trending — filter client-side by genre label keywords
+  if (trendingResult.status === 'fulfilled' && trendingResult.value) {
+    const genreWords = genre.label.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+    const trendingBooks = extractBooks(trendingResult.value).filter(b => {
+      if (!b.genre) return false
+      const g = b.genre.toLowerCase()
+      return genreWords.some(w => g.includes(w))
+    })
+    gathered.push(...trendingBooks)
   }
 
-  // If filtered result is still too small, use unfiltered tier0Direct as fallback
-  const usedBooks = finalBooks.length >= 5
-    ? finalBooks
-    : filter([...tier0DirectBooks, ...tier1Books, ...tier2Books, ...tier3Books].map(b => b))
+  // 2. Author results + seed results — include everything (authors are curated per genre)
+  for (const r of restResults) {
+    if (r.status === 'fulfilled' && r.value) {
+      gathered.push(...extractBooks(r.value))
+    }
+  }
 
-  console.log(
-    `[GenrePage] ${usedBooks.length} books loaded for "${genre.label}"` +
-    ` (api:${filter(tier0DirectBooks).length} t1:${filter(tier1Books).length} t2:${filter(tier2Books).length} t3:${filter(tier3Books).length})`
-  )
+  // Deduplicate and clean
+  finalBooks = dedup(gathered).filter(b => isClean(b, genre.blocklist || []))
 
-  return { books: usedBooks.slice(0, topN), source: 'ranked' }
+  // Sort by rating as a quality signal (descending)
+  finalBooks.sort((a, b) => (b.average_rating || 0) - (a.average_rating || 0))
+
+  console.log(`[GenrePage] ${finalBooks.length} books ready for "${genre.label}"`)
+
+  return { books: finalBooks.slice(0, topN), source: 'ranked' }
 }
 
 // SIDEBAR GROUPS

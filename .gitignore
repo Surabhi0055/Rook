@@ -133,3 +133,6 @@ dmypy.json
 Pipfile.lock
 poetry.lockscreenshots/
 frontend/rook-frontend/dist/
+
+# ─── HUGGING FACE DEPLOY CACHE ───────────────────────────────
+.hf_repo/

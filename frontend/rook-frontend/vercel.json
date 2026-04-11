@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/uploads/(.*)",
+      "destination": "https://surabhibh05-rook.hf.space/uploads/$1"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "https://surabhibh05-rook.hf.space/api/$1"
     },

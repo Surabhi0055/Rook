@@ -244,10 +244,10 @@ _TITLE_GENRE_OVERRIDES: dict[str, set[str]] = {
     "eragon":                 {"fantasy", "young-adult"},
 }
 
+@lru_cache(maxsize=10000)
 def _get_effective_tags(row_idx: int) -> list[str]:
-    row       = books.iloc[row_idx]
-    base_tags = list(row["all_tags"])
-    title_lc  = str(row.get("title_clean", ""))
+    base_tags = list(books["all_tags"].iat[row_idx])
+    title_lc  = str(books["title_clean"].iat[row_idx])
     for fragment, inject_tags in _TITLE_GENRE_OVERRIDES.items():
         if fragment in title_lc:
             for t in inject_tags:

@@ -11,7 +11,7 @@ async function apiPost(path, body, token = null) {
   try {
     const res  = await fetch(API + path, { method: 'POST', headers, body: JSON.stringify(body) })
     const data = await res.json().catch(() => ({}))
-    if (res.status === 401) {
+    if (res.status === 401 && !path.includes('/auth/login') && !path.includes('/auth/google')) {
       localStorage.removeItem('rook_access_token')
       window.location.href = '/auth'   
       return { ok: false, status: 401, data }
