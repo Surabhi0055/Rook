@@ -1,4 +1,5 @@
 import os
+import ssl
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
@@ -39,9 +40,17 @@ if _is_sqlite:
     _engine_kwargs["connect_args"] = {"check_same_thread": False}
 
 elif _is_postgres:
-    # Connection pool settings only make sense for a real server database
-    _engine_kwargs["pool_size"]    = 10
-    _engine_kwargs["max_overflow"] = 20
+    # Supabase pooler uses self-signed certs — create a permissive SSL context
+    _ssl_ctx = ssl.create_default_context()
+    _ssl_ctx.check_hostname = False
+    _ssl_ctx.verify_mode = ssl.CERT_NONE
+    # statement_cache_size=0 is REQUIRED for Supabase transaction-mode pooler (pgBouncer/Supavisor)
+    _engine_kwargs["pool_size"]       = 10
+    _engine_kwargs["max_overflow"]    = 20
+    _engine_kwargs["connect_args"]    = {
+        "ssl": _ssl_ctx,
+        "statement_cache_size": 0,
+    }
 
 engine = create_async_engine(DATABASE_URL, **_engine_kwargs)
 
