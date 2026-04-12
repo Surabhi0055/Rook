@@ -68,8 +68,8 @@ async def register(body: schemas.RegisterRequest, db: AsyncSession = Depends(get
     db.add(models.RefreshToken(
         user_id=user.id,
         token=refresh,
-        expires_at=datetime.fromtimestamp(
-            decode_token(refresh)["exp"], tz=timezone.utc
+        expires_at=datetime.utcfromtimestamp(
+            decode_token(refresh)["exp"]
         )
     ))
     await db.commit()
@@ -108,8 +108,8 @@ async def login(body: schemas.LoginRequest, db: AsyncSession = Depends(get_db)):
     db.add(models.RefreshToken(
         user_id=user.id,
         token=refresh,
-        expires_at=datetime.fromtimestamp(
-            decode_token(refresh)["exp"], tz=timezone.utc
+        expires_at=datetime.utcfromtimestamp(
+            decode_token(refresh)["exp"]
         )
     ))
     await db.commit()
@@ -180,14 +180,14 @@ async def google_login(body: GoogleLoginRequest, db: AsyncSession = Depends(get_
             db.add(models.RefreshToken(
                 user_id=user.id,
                 token=refresh,
-                expires_at=datetime.fromtimestamp(
-                    decode_token(refresh)["exp"], tz=timezone.utc
+                expires_at=datetime.utcfromtimestamp(
+                    decode_token(refresh)["exp"]
                 )
             ))
             await db.commit()
         except Exception as e:
             print(f"[auth] JWT Generation failed: {str(e)}")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to issue security tokens")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to issue security tokens: {str(e)}")
 
         return {
             "access_token":  access,
@@ -198,7 +198,7 @@ async def google_login(body: GoogleLoginRequest, db: AsyncSession = Depends(get_
         }
     except Exception as e:
         print(f"[auth] Database error during Google login: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error during authentication")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error during authentication: {str(e)}")
 # ─────────────────────────────────────────────
 # REFRESH TOKEN
 # ─────────────────────────────────────────────
@@ -272,8 +272,8 @@ async def change_password(
     db.add(models.RefreshToken(
         user_id=user.id,
         token=refresh,
-        expires_at=datetime.fromtimestamp(
-            decode_token(refresh)["exp"], tz=timezone.utc
+        expires_at=datetime.utcfromtimestamp(
+            decode_token(refresh)["exp"]
         )
     ))
 
@@ -365,8 +365,8 @@ async def forgot_password_reset(
     db.add(models.RefreshToken(
         user_id=user.id,
         token=refresh,
-        expires_at=datetime.fromtimestamp(
-            decode_token(refresh)["exp"], tz=timezone.utc
+        expires_at=datetime.utcfromtimestamp(
+            decode_token(refresh)["exp"]
         )
     ))
 

@@ -13,6 +13,9 @@ if not _raw_url:
     load_dotenv("config.env")
     _raw_url = str(os.getenv("DATABASE_URL") or "").strip()
 
+# Force remove sslmode from URL since asyncpg throws a TypeError on it
+_raw_url = _raw_url.replace("?sslmode=require", "").replace("&sslmode=require", "")
+
 if not _raw_url:
     # Final production fallback
     _raw_url = "sqlite+aiosqlite:///./rook.db"
