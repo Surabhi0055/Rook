@@ -2064,7 +2064,14 @@ function SimilarBooksPage({seedBook,onOpen,onBack}){
   //  HOME (main export)
 export default function Home() {
   const navigate = useNavigate()
-  const { setHandleAuthor, modalBook, setModalBook, readBooks, setReadBooks } = useApp()
+  const { 
+    setHandleAuthor, modalBook, setModalBook, 
+    savedBooks, setSavedBooks, 
+    likedBooks, setLikedBooks, 
+    wishlistBooks, setWishlistBooks, 
+    readBooks, setReadBooks 
+  } = useApp()
+
   const [storedUser] = useState(() => { try { return JSON.parse(localStorage.getItem('rook_user') || '{}') } catch { return {} } })
   const userKey = storedUser.username || storedUser.email || 'guest'
   const profileKeyName = `rook_name_${userKey}`
@@ -2080,16 +2087,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [toast, setToast] = useState('')
   const [isLight, setIsLight] = useState(() => document.documentElement.getAttribute('data-theme') === 'light')
-  
-  // ── Pulling EVERYTHING from global AppContext (No local duplication!) ────
-  const { 
-    savedBooks, setSavedBooks, 
-    likedBooks, setLikedBooks, 
-    wishlistBooks, setWishlistBooks, 
-    readBooks, setReadBooks 
-  } = useApp()
-
-  const [recentBooks, setRecentBooks] = useState([]) // Recent is okay to keep local as it's volatile
+  const [recentBooks, setRecentBooks] = useState([])
   const { imageUrl: profileImageUrl, setImageUrl: setProfileImageUrl } = useUserProfileImage()
   
   useEffect(() => { document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark') }, [isLight])
