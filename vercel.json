@@ -1,0 +1,5 @@
+{
+  "name": "rook-frontend",
+  "framework": "vite",
+  "rootDirectory": "frontend/rook-frontend"
+}
