@@ -526,7 +526,7 @@ export default function Auth() {
 
   function handleSuccess(username, isNew) {
     setSuccess({ username, isNew })
-    setTimeout(() => navigate('/home', { replace:true }), 3100)
+    setTimeout(() => { window.location.href = '/' }, 3100)
   }
 
   const cardBg     = isLight ? 'rgba(245,237,228,0.78)' : 'rgba(0,0,0,0.0975)'

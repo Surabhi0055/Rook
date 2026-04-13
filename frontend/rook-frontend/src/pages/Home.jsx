@@ -1843,8 +1843,10 @@ function ProfilePage({
   }
   const storedUser = getStoredUser()
   const displayName = userName || storedUser.username || storedUser.name || storedUser.email || 'Reader'
-  const [name, setName] = useState(() => localStorage.getItem('rook_name') || displayName)
-  const [bio, setBio] = useState(() => localStorage.getItem('rook_bio') || '')
+  const profileKeyName = `rook_name_${storedUser.username || storedUser.email || 'guest'}`
+  const profileKeyBio = `rook_bio_${storedUser.username || storedUser.email || 'guest'}`
+  const [name, setName] = useState(() => localStorage.getItem(profileKeyName) || displayName)
+  const [bio, setBio] = useState(() => localStorage.getItem(profileKeyBio) || '')
   const [saved2, setSaved2] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   function getRawUrl() {
@@ -1897,7 +1899,15 @@ function ProfilePage({
   const totalBooks = savedBooks.length + likedBooks.length + wishlistBooks.length + readBooks.length
   const topAuthor = useMemo(() => { const freq = {}; ;[...likedBooks,...readBooks,...savedBooks].forEach(b=>{const a=(b.authors||'').split(',')[0].trim();if(a)freq[a]=(freq[a]||0)+1}); return Object.entries(freq).sort((a,b)=>b[1]-a[1])[0]?.[0]||null }, [likedBooks,readBooks,savedBooks])
   const avgRating = useMemo(() => { const rated = [...likedBooks,...readBooks,...savedBooks].filter(b=>b.average_rating>0); if(!rated.length) return null; return (rated.reduce((s,b)=>s+Number(b.average_rating),0)/rated.length).toFixed(1) }, [likedBooks,readBooks,savedBooks])
-  function saveProfile() { localStorage.setItem('rook_name', name); localStorage.setItem('rook_bio', bio); onNameSaved?.(name); setSaved2(true); setTimeout(()=>setSaved2(false), 2500) }
+  function saveProfile() {
+    const kName = `rook_name_${storedUser.username || storedUser.email || 'guest'}`
+    const kBio = `rook_bio_${storedUser.username || storedUser.email || 'guest'}`
+    localStorage.setItem(kName, name)
+    localStorage.setItem(kBio, bio)
+    onNameSaved?.(name)
+    setSaved2(true)
+    setTimeout(()=>setSaved2(false), 2500)
+  }
   const initial = (name||displayName).charAt(0).toUpperCase()
   const hue = (name||displayName).split('').reduce((a,c)=>a+c.charCodeAt(0),0)%360
   const loginEmail = storedUser.email || ''; const loginUsername = storedUser.username || ''
@@ -2056,9 +2066,10 @@ export default function Home() {
   const navigate = useNavigate()
   const { setHandleAuthor, modalBook, setModalBook, readBooks, setReadBooks } = useApp()
   const [storedUser] = useState(() => { try { return JSON.parse(localStorage.getItem('rook_user') || '{}') } catch { return {} } })
-  const [userName, setUserName] = useState(() => localStorage.getItem('rook_name') || storedUser.username || storedUser.name || storedUser.email || 'Reader')
-  const userInitial = userName.charAt(0).toUpperCase()
   const userKey = storedUser.username || storedUser.email || 'guest'
+  const profileKeyName = `rook_name_${userKey}`
+  const [userName, setUserName] = useState(() => localStorage.getItem(profileKeyName) || storedUser.username || storedUser.name || storedUser.email || 'Reader')
+  const userInitial = userName.charAt(0).toUpperCase()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('rook_sb_collapsed') === '1')
   const [currentPage, setCurrentPage] = useState('home')
   const [genreParam, setGenreParam] = useState('')
