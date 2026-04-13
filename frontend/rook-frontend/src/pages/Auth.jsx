@@ -23,12 +23,9 @@ async function apiPost(path, body, token = null) {
   }
 }
 function saveSession(data) {
-  // Purge any lingering state from previous user sessions
-  Object.keys(localStorage).forEach(k => {
-    if (k.startsWith('rook_') && k !== 'rook_theme' && k !== 'rook_remember') {
-      localStorage.removeItem(k)
-    }
-  })
+  // Only clear active session info, NOT namespaced library data!
+  const sessionKeys = ['rook_access_token', 'rook_refresh_token', 'rook_user']
+  sessionKeys.forEach(k => localStorage.removeItem(k))
 
   if (data.access_token)  localStorage.setItem('rook_access_token',  data.access_token)
   if (data.refresh_token) localStorage.setItem('rook_refresh_token', data.refresh_token)
@@ -72,6 +69,7 @@ const IconEye   = ({ off }) => off
   : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
 const IconBack  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
 const IconCheck = () => <svg viewBox="0 0 24 24" fill="none" stroke="#6fcf97" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="30" height="30"><polyline points="20 6 9 17 4 12"/></svg>
+const IconCheckSmall = ({ color='#f0e8dc' }) => <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" width="9" height="9"><polyline points="20 6 9 17 4 12"/></svg>
 
 /* ─────────────────────────────────────────────────────────────
    GOOGLE SIGN-IN BUTTON COMPONENT
@@ -336,8 +334,10 @@ function LoginPanel({ onSwitch, onSuccess, isLight }) {
       </div>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:8, marginBottom:2 }}>
         <label style={{ display:'flex', alignItems:'center', gap:7, fontFamily:'Montaga, serif', fontSize:12.5, color:isLight?'#2a1a14':'rgba(232,221,208,0.65)', cursor:'pointer', userSelect:'none' }}>
-          <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
-            style={{ appearance:'none', WebkitAppearance:'none', width:15, height:15, borderRadius:4, border:'1px solid rgba(201,168,76,0.35)', background:remember?'#6b1e28':'rgba(107,30,40,0.25)', cursor:'pointer', flexShrink:0, transition:'all 0.2s' }} />
+          <div onClick={() => setRemember(!remember)}
+            style={{ width:15, height:15, borderRadius:4, border:`1px solid ${remember?'rgba(201,168,76,0.6)':'rgba(201,168,76,0.35)'}`, background:remember?'#6b1e28':'rgba(107,30,40,0.25)', cursor:'pointer', flexShrink:0, transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', boxSizing:'border-box' }}>
+            {remember && <IconCheckSmall />}
+          </div>
           Remember me
         </label>
         <span onClick={() => onSwitch('forgot')} style={{ fontSize:12, color:isLight?'#2a1a14':'rgba(232,221,208,0.6)', fontFamily:'Montaga, serif', cursor:'pointer' }} onMouseEnter={e=>e.target.style.color='#c9a84c'} onMouseLeave={e=>e.target.style.color=isLight?'#2a1a14':'rgba(232,221,208,0.6)'}>

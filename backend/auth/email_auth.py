@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-GMAIL_USER     = os.getenv("GMAIL_USER")
-GMAIL_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+GMAIL_USER     = (os.getenv("GMAIL_USER") or "").strip()
+GMAIL_PASSWORD = (os.getenv("GMAIL_APP_PASSWORD") or "").strip()
 
 _otp_store: dict = {}
 

@@ -2130,14 +2130,10 @@ export default function Home() {
   function handleSearch(q) { setSearchQuery(q.toLowerCase()); handleNav('search') }
   function handleSimilar(book) { setSimilarBook(book); handleNav('similar') }
   function handleLogout() {
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith('rook_') && k !== 'rook_theme' && k !== 'rook_remember') {
-        localStorage.removeItem(k)
-      }
-    })
+    // Only clear session keys, keep namespaced data like rook_saved_username
+    const sessionKeys = ['rook_access_token', 'rook_refresh_token', 'rook_user']
+    sessionKeys.forEach(k => localStorage.removeItem(k))
     sessionStorage.clear()
-    setProfileImageUrl(''); setSavedBooks([]); setLikedBooks([]); setWishlistBooks([]); setRecentBooks([])
-    if (setReadBooks) setReadBooks([])
     window.location.href = '/auth'
   }
   const bookProps = { savedSet, likedSet, wishedSet, onSave: handleSave, onLike: handleLike, onWish: handleWish }

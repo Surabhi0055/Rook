@@ -136,3 +136,5 @@ frontend/rook-frontend/dist/
 
 # ─── HUGGING FACE DEPLOY CACHE ───────────────────────────────
 .hf_repo/
+.vercel
+.env*.local
