@@ -2124,8 +2124,10 @@ export default function Home() {
         localStorage.removeItem(k)
       }
     })
+    sessionStorage.clear()
     setProfileImageUrl(''); setSavedBooks([]); setLikedBooks([]); setWishlistBooks([]); setRecentBooks([])
-    if (setReadBooks) setReadBooks([]); navigate('/auth', { replace: true })
+    if (setReadBooks) setReadBooks([])
+    window.location.href = '/auth'
   }
   const bookProps = { savedSet, likedSet, wishedSet, onSave: handleSave, onLike: handleLike, onWish: handleWish }
   const sbW = isDesktop ? (sidebarCollapsed ? 62 : 230) : 0
