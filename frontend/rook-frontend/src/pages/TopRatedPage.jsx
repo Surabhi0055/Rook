@@ -9,10 +9,16 @@ if (typeof document !== 'undefined' && !document.getElementById('rook-spin-style
   document.head.appendChild(s)
 }
 
-// ─── localStorage keys ────────────────────────────────────────────────────────
-const RATINGS_KEY = 'rook_user_ratings'
+function getRatingsKey() {
+  try {
+    const u = JSON.parse(localStorage.getItem('rook_user') || '{}');
+    const uk = u.username || u.email || u.id || 'guest';
+    return `rook_user_ratings_${uk}`;
+  } catch { return 'rook_user_ratings_guest'; }
+}
+
 function getStoredRatings() {
-  try { return JSON.parse(localStorage.getItem(RATINGS_KEY) || '{}') } catch { return {} }
+  try { return JSON.parse(localStorage.getItem(getRatingsKey()) || '{}') } catch { return {} }
 }
 
 // ─── Session cache (20-min TTL) ───────────────────────────────────────────────

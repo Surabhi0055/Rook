@@ -6,11 +6,17 @@ import { ensureBook } from "../api/client";
 // LOCAL PERSISTENCE
 // ─────────────────────────────────────────────────────────────────────────────
 
-const RATINGS_KEY = "rook_user_ratings";
+function getRatingsKey() {
+  try {
+    const u = JSON.parse(localStorage.getItem('rook_user') || '{}');
+    const uk = u.username || u.email || u.id || 'guest';
+    return `rook_user_ratings_${uk}`;
+  } catch { return 'rook_user_ratings_guest'; }
+}
 
 function getSavedRatings() {
   try {
-    return JSON.parse(localStorage.getItem(RATINGS_KEY) || "{}");
+    return JSON.parse(localStorage.getItem(getRatingsKey()) || "{}");
   } catch {
     return {};
   }
@@ -20,7 +26,7 @@ function saveRatingLocally(bookId, rating) {
   try {
     const existing = getSavedRatings();
     existing[String(bookId)] = rating;
-    localStorage.setItem(RATINGS_KEY, JSON.stringify(existing));
+    localStorage.setItem(getRatingsKey(), JSON.stringify(existing));
   } catch {}
 }
 
