@@ -23,10 +23,16 @@ async function apiPost(path, body, token = null) {
   }
 }
 function saveSession(data) {
+  // Purge any lingering state from previous user sessions
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith('rook_') && k !== 'rook_theme' && k !== 'rook_remember') {
+      localStorage.removeItem(k)
+    }
+  })
+
   if (data.access_token)  localStorage.setItem('rook_access_token',  data.access_token)
   if (data.refresh_token) localStorage.setItem('rook_refresh_token', data.refresh_token)
   localStorage.setItem('rook_user', JSON.stringify(data.user || {}))
-
 }
 function getToken() {
   const token = localStorage.getItem("rook_access_token");

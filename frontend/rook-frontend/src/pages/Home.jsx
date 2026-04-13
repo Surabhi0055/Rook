@@ -2119,7 +2119,11 @@ export default function Home() {
   function handleSearch(q) { setSearchQuery(q.toLowerCase()); handleNav('search') }
   function handleSimilar(book) { setSimilarBook(book); handleNav('similar') }
   function handleLogout() {
-    localStorage.removeItem('rook_access_token'); localStorage.removeItem('rook_refresh_token'); localStorage.removeItem('rook_user'); localStorage.removeItem('rook_profile_image')
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('rook_') && k !== 'rook_theme' && k !== 'rook_remember') {
+        localStorage.removeItem(k)
+      }
+    })
     setProfileImageUrl(''); setSavedBooks([]); setLikedBooks([]); setWishlistBooks([]); setRecentBooks([])
     if (setReadBooks) setReadBooks([]); navigate('/auth', { replace: true })
   }
