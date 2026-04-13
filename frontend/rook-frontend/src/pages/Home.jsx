@@ -2080,17 +2080,18 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [toast, setToast] = useState('')
   const [isLight, setIsLight] = useState(() => document.documentElement.getAttribute('data-theme') === 'light')
-  const [savedBooks, setSavedBooks] = useState(() => loadList(userKey, 'saved'))
-  const [likedBooks, setLikedBooks] = useState(() => loadList(userKey, 'liked'))
-  const [wishlistBooks, setWishlistBooks] = useState(() => loadList(userKey, 'wishlist'))
-  const [recentBooks, setRecentBooks] = useState(() => loadList(userKey, 'recent'))
+  
+  // ── Pulling EVERYTHING from global AppContext (No local duplication!) ────
+  const { 
+    savedBooks, setSavedBooks, 
+    likedBooks, setLikedBooks, 
+    wishlistBooks, setWishlistBooks, 
+    readBooks, setReadBooks 
+  } = useApp()
+
+  const [recentBooks, setRecentBooks] = useState([]) // Recent is okay to keep local as it's volatile
   const { imageUrl: profileImageUrl, setImageUrl: setProfileImageUrl } = useUserProfileImage()
-  useEffect(() => { saveList(userKey, 'saved', savedBooks) }, [savedBooks])
-  useEffect(() => { saveList(userKey, 'liked', likedBooks) }, [likedBooks])
-  useEffect(() => { saveList(userKey, 'wishlist', wishlistBooks) }, [wishlistBooks])
-  useEffect(() => { saveList(userKey, 'recent', recentBooks) }, [recentBooks])
-  useEffect(() => { if (readBooks) saveList(userKey, 'read', readBooks) }, [readBooks])
-  useEffect(() => { const s = loadList(userKey, 'read'); if (s.length && setReadBooks) setReadBooks(s) }, [userKey])
+  
   useEffect(() => { document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark') }, [isLight])
   useEffect(() => { const fn = () => setIsDesktop(window.innerWidth > 900); window.addEventListener('resize', fn); return () => window.removeEventListener('resize', fn) }, [])
   useEffect(() => { const fn = e => { if (e.key === 'Escape') setModalBook(null) }; window.addEventListener('keydown', fn); return () => window.removeEventListener('keydown', fn) }, [])
