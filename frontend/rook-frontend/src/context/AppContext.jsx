@@ -12,15 +12,26 @@ function load(key, fallback) {
 }
 
 export function AppProvider({ children }) {
+  // ── User Key Detection ────────────────────────────────────────
+  const [userKey, setUserKey] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('rook_user') || '{}');
+      return u.username || u.email || 'guest';
+    } catch { return 'guest'; }
+  });
+
+  // Helper to get namespaced key
+  const nk = (key) => `${key}_${userKey}`;
+
   // ── Persistent state ──────────────────────────────────────────
-  const [savedBooks, setSavedBooks] = useState(() => load("rook_saved", []));
-  const [likedBooks, setLikedBooks] = useState(() => load("rook_liked", []));
+  const [savedBooks, setSavedBooks] = useState(() => load(nk("rook_saved"), []));
+  const [likedBooks, setLikedBooks] = useState(() => load(nk("rook_liked"), []));
   const [wishlistBooks, setWishlistBooks] = useState(() =>
-    load("rook_wishlist", []),
+    load(nk("rook_wishlist"), []),
   );
-  const [readBooks, setReadBooks] = useState(() => load("rook_read", []));
+  const [readBooks, setReadBooks] = useState(() => load(nk("rook_read"), []));
   const [userProfile, setUserProfile] = useState(() =>
-    load("rook_profile", {}),
+    load(nk("rook_profile"), {}),
   );
   const [theme, setTheme] = useState(() => load("rook_theme", "dark"));
 
@@ -33,22 +44,48 @@ export function AppProvider({ children }) {
   // ── handleAuthor — set by Home.jsx on mount via setHandleAuthor ─
   const [handleAuthor, setHandleAuthor] = useState(() => () => {});
 
+  // ── Sync userKey when rook_user changes ────────────────────────
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const u = JSON.parse(localStorage.getItem('rook_user') || '{}');
+        const newKey = u.username || u.email || 'guest';
+        if (newKey !== userKey) {
+          setUserKey(newKey);
+          // Reload data for the new user
+          setSavedBooks(load(`rook_saved_${newKey}`, []));
+          setLikedBooks(load(`rook_liked_${newKey}`, []));
+          setWishlistBooks(load(`rook_wishlist_${newKey}`, []));
+          setReadBooks(load(`rook_read_${newKey}`, []));
+          setUserProfile(load(`rook_profile_${newKey}`, {}));
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    // Also poll slightly for local changes that don't trigger 'storage' event
+    const interval = setInterval(handleStorage, 1000);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, [userKey]);
+
   // ── Auto-save to localStorage ─────────────────────────────────
   useEffect(() => {
-    localStorage.setItem("rook_saved", JSON.stringify(savedBooks));
-  }, [savedBooks]);
+    localStorage.setItem(nk("rook_saved"), JSON.stringify(savedBooks));
+  }, [savedBooks, userKey]);
   useEffect(() => {
-    localStorage.setItem("rook_liked", JSON.stringify(likedBooks));
-  }, [likedBooks]);
+    localStorage.setItem(nk("rook_liked"), JSON.stringify(likedBooks));
+  }, [likedBooks, userKey]);
   useEffect(() => {
-    localStorage.setItem("rook_wishlist", JSON.stringify(wishlistBooks));
-  }, [wishlistBooks]);
+    localStorage.setItem(nk("rook_wishlist"), JSON.stringify(wishlistBooks));
+  }, [wishlistBooks, userKey]);
   useEffect(() => {
-    localStorage.setItem("rook_read", JSON.stringify(readBooks));
-  }, [readBooks]);
+    localStorage.setItem(nk("rook_read"), JSON.stringify(readBooks));
+  }, [readBooks, userKey]);
   useEffect(() => {
-    localStorage.setItem("rook_profile", JSON.stringify(userProfile));
-  }, [userProfile]);
+    localStorage.setItem(nk("rook_profile"), JSON.stringify(userProfile));
+  }, [userProfile, userKey]);
   useEffect(() => {
     localStorage.setItem("rook_theme", theme);
     document.documentElement.setAttribute("data-theme", theme);
