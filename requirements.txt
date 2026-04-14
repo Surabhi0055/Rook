@@ -27,3 +27,4 @@ multipart
 python-multipart
 email-validator
 aiosmtplib
+resend

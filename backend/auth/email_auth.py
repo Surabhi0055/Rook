@@ -2,15 +2,16 @@ import os
 import random
 import string
 from datetime import datetime, timedelta, timezone
-import aiosmtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import resend
 from dotenv import load_dotenv
 
 load_dotenv()
 
-GMAIL_USER     = (os.getenv("GMAIL_USER") or "").strip()
-GMAIL_PASSWORD = (os.getenv("GMAIL_APP_PASSWORD") or "").replace(" ", "").strip()
+# We still use GMAIL_USER for the "to" field metadata if needed, 
+# but RESEND_API_KEY is the main secret now.
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
 
 _otp_store: dict = {}
 
@@ -37,12 +38,12 @@ def verify_otp(email: str, otp: str) -> bool:
         return False
     if record["otp"] != otp.strip():
         return False
-    _otp_store.pop(email, None)   # OTP is single-use
+    _otp_store.pop(email, None)
     return True
 
 async def send_otp_email(to_email: str, otp: str, username: str) -> None:
-    if not GMAIL_USER or not GMAIL_PASSWORD:
-        raise RuntimeError("GMAIL_USER and GMAIL_APP_PASSWORD must be set in Environment Secrets")
+    if not RESEND_API_KEY:
+        raise RuntimeError("RESEND_API_KEY must be set in Environment Secrets")
 
     html = f"""
     <div style="font-family:'Segoe UI',sans-serif;max-width:480px;margin:0 auto;
@@ -66,23 +67,25 @@ async def send_otp_email(to_email: str, otp: str, username: str) -> None:
           </span>
         </div>
         <p style="font-size:12px;color:rgba(240,232,220,0.4);margin:0;">
-          If you didn't request this, you can safely ignore this email.
+          If you didn't request this, it's safe to ignore this email.
         </p>
       </div>
     </div>
     """
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "ROOK — Your password reset code"
-    msg["From"]    = f"ROOK <{GMAIL_USER}>"
-    msg["To"]      = to_email
-    msg.attach(MIMEText(html, "html"))
-
-    await aiosmtplib.send(
-        msg,
-        hostname="smtp.gmail.com",
-        port=465,
-        use_tls=True,
-        username=GMAIL_USER,
-        password=GMAIL_PASSWORD,
-    )
+    try:
+        # Note: Resend's onboarding domain only allows sending to your own verified email.
+        # If the user is testing with their own email, this will work.
+        params = {
+            "from": "ROOK <onboarding@resend.dev>",
+            "to": to_email,
+            "subject": "ROOK — Your password reset code",
+            "html": html,
+        }
+        
+        resend.Emails.send(params)
+        print(f"[debug] Resend email triggered for {to_email}")
+        
+    except Exception as e:
+        print(f"[error] Resend failed: {str(e)}")
+        raise e
