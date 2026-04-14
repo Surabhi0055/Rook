@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GMAIL_USER     = (os.getenv("GMAIL_USER") or "").strip()
-GMAIL_PASSWORD = (os.getenv("GMAIL_APP_PASSWORD") or "").strip()
+GMAIL_PASSWORD = (os.getenv("GMAIL_APP_PASSWORD") or "").replace(" ", "").strip()
 
 _otp_store: dict = {}
 
@@ -21,14 +21,14 @@ def _generate_otp() -> str:
 
 def store_otp(email: str) -> str:
     otp = _generate_otp()
-    _otp_store[email.lower()] = {
+    _otp_store[email.lower().strip()] = {
         "otp":     otp,
         "expires": datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRE_MINUTES),
     }
     return otp
 
 def verify_otp(email: str, otp: str) -> bool:
-    email = email.lower()
+    email = email.lower().strip()
     record = _otp_store.get(email)
     if not record:
         return False
@@ -42,7 +42,7 @@ def verify_otp(email: str, otp: str) -> bool:
 
 async def send_otp_email(to_email: str, otp: str, username: str) -> None:
     if not GMAIL_USER or not GMAIL_PASSWORD:
-        raise RuntimeError("GMAIL_USER and GMAIL_APP_PASSWORD must be set in .env")
+        raise RuntimeError("GMAIL_USER and GMAIL_APP_PASSWORD must be set in Environment Secrets")
 
     html = f"""
     <div style="font-family:'Segoe UI',sans-serif;max-width:480px;margin:0 auto;
@@ -81,8 +81,8 @@ async def send_otp_email(to_email: str, otp: str, username: str) -> None:
     await aiosmtplib.send(
         msg,
         hostname="smtp.gmail.com",
-        port=587,
-        start_tls=True,
+        port=465,
+        use_tls=True,
         username=GMAIL_USER,
         password=GMAIL_PASSWORD,
     )
