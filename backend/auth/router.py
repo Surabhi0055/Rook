@@ -306,7 +306,7 @@ async def forgot_password_request(
             await send_otp_email(body.email, otp, user.username)
         except Exception as e:
             print(f"[email] Failed to send OTP: {e}")
-            raise HTTPException(500, "Failed to send email. Check your GMAIL credentials.")
+            raise HTTPException(500, f"Failed to send email: {str(e)}")
 
     # Always return 200 — never reveal if email exists
     return {"message": "If that email is registered, a code has been sent."}
