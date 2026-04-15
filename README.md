@@ -2,7 +2,7 @@
 
 # ROOK
 
-### AI-Powered Book Recommendation System
+### Semantic Book Discovery Engine
 
 **Discover your next great read — by mood, season, vibe, time or feeling.**
 
@@ -18,21 +18,32 @@
 
 </div>
 
+
+---
+
+## 🔗 Deployment
+
+| Component | Platform | URL |
+| --------- | -------- | --- |
+| **Frontend** | Vercel | [rook-frontend.vercel.app](https://rook-frontend.vercel.app/) |
+| **Backend API** | Hugging Face | [surabhibh05-rook.hf.space](https://huggingface.co/spaces/surabhibh05/rook) |
+| **Database** | **Supabase** | [supabase.com](https://supabase.com/) |
+
 ---
 
 ## Features
 
-ROOK is not just a search engine — it's a mood-aware, AI-powered literary companion.
+ROOK is a discovery engine that moves beyond simple search to find books based on atmosphere and personal reading context.
 
 | Feature                        | Description                                                                                          |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------- |
 | **Mood Recommendations** | 12 emotional presets (cosy, tense, dreamy, romantic…) powered by Ollama LLM + FAISS semantic search |
 | **Contextual Discovery** | Recommendations adapt to your season, time of day, travel context, and reading time                  |
 | **Song Soundtracks**     | Every book gets a curated Spotify playlist matching its emotional atmosphere                         |
-| **AI Taste Profile**     | "For You" uses Ollama LLM to analyse your full library and generate personalised picks               |
+| **Personal Taste Profile**     | "For You" uses locally-processed analysis to identify personalized picks from your library.               |
 | **Describe Any Vibe**    | Type*"a cosy mystery set in a rainy English village"* and get perfect matches                        |
 | **Smart Ratings Chart**  | Your 4–5 star ratings + likes/reads build a personal ranked chart                                   |
-| **Full Authentication**  | Email/password, Google OAuth, OTP-based forgot-password via Gmail                                    |
+| **Full Authentication**  | Email/password, Google OAuth, and OTP-based password recovery.                                    |
 | **Dark / Light Theme**   | Beautiful dual-theme design system with animated toggle                                              |
 | **Responsive Design**    | Works seamlessly on desktop and mobile                                                               |
 
@@ -249,11 +260,10 @@ BOOK_RECOMMENDER/                    ← Project Root
 | Technology                     | Purpose                                              |
 | ------------------------------ | ---------------------------------------------------- |
 | **FastAPI**              | Async REST API                                       |
-| **SQLAlchemy 2.x async** | ORM — works with SQLite (dev) and PostgreSQL (prod) |
+| **SQLAlchemy 2.x async** | ORM — works with SQLite (dev) and **Supabase/PostgreSQL** (prod) |
 | **Pydantic v2**          | Schema validation for all requests/responses         |
 | **python-jose**          | JWT access + refresh token generation                |
 | **passlib + bcrypt**     | Secure password hashing                              |
-| **aiosmtplib**           | Async OTP emails via Gmail                           |
 | **httpx**                | Async Spotify API calls                              |
 | **aiofiles**             | Async avatar image file uploads                      |
 
@@ -371,8 +381,8 @@ pip install -r requirements.txt
 Create `.env` in the `backend/` folder:
 
 ```env
-# Database
-DATABASE_URL=sqlite+aiosqlite:///./rook.db
+# Database (Supabase / PostgreSQL)
+DATABASE_URL=postgresql+asyncpg://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT].supabase.co:5432/postgres
 
 # JWT — generate key with: openssl rand -hex 32
 JWT_SECRET_KEY=your-secret-key-here
@@ -382,10 +392,6 @@ REFRESH_TOKEN_EXPIRE_DAYS=30
 
 # Google OAuth (console.cloud.google.com)
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
-
-# Gmail OTP (use App Password, not account password)
-GMAIL_USER=youremail@gmail.com
-GMAIL_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 
 # Spotify (developer.spotify.com/dashboard)
 SPOTIFY_CLIENT_ID=your_client_id
